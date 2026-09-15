@@ -1,0 +1,85 @@
+{
+    "devices": {
+       "LCD_Track_1": {
+            "type": "LCD",
+            "params": {
+                "I2C_address": 25
+            }
+        },
+        "LCD_Track_2": {
+            "type": "LCD",
+            "params": {
+                "I2C_address": 26
+            }
+        },
+        "LCD_Circuit": {
+            "type": "LCD",
+            "params": {
+                "I2C_address": 27
+            }
+        },
+        "SNS_Track_1": {
+            "type": "Obstacle_Sensor",
+            "params": {
+                "GPIO_pin": 14,
+                "bounce_time": 0.05
+            }
+        },
+        "SNS_Track_2": {
+            "type": "Obstacle_Sensor",
+            "params": {
+                "GPIO_pin": 18,
+                "bounce_time": 0.05
+            }
+        },
+        "TRL_Track_1": {
+            "type": "Traffic_Light",
+            "params": {
+                "GPIO_pin_red": 0,
+                "GPIO_pin_yellow": 5,
+                "GPIO_pin_green": 6
+            }
+        },
+        "TRL_Track_2": {
+            "type": "Traffic_Light",
+            "params": {
+                "GPIO_pin_red": 25,
+                "GPIO_pin_yellow": 24,
+                "GPIO_pin_green": 23
+            }
+        },
+        "Selector": {
+            "type": "Rotary_Encoder",
+            "params": {
+                "GPIO_pin_CLK": 21,
+                "GPIO_pin_DT": 20,
+                "GPIO_pin_SW": 16
+            }
+        },
+        "Speaker": {
+            "type": "Passive_Buzzer",
+            "params": {
+                "GPIO_pin": 12
+            }
+        },
+        "BTN_Reset": {
+            "type": "Button",
+            "params": {
+                "GPIO_pin": 26,
+                "bounce_time": 0.1
+            }
+        },
+        "BTN_Restart": {
+            "type": "Button",
+            "params": {
+                "GPIO_pin": 17
+            }
+        },
+        "BTN_Start": {
+            "type": "Button",
+            "params": {
+                "GPIO_pin": 13
+            }
+        }
+    }
+}

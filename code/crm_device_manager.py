@@ -1,0 +1,284 @@
+"""Device manager for Carrera Race Monitor.
+
+This module handles the management of devices connected to the Carrera Race Monitor system.
+It provides registration of callback functions for relevant events of input devices
+as well as access to output devices.
+
+Input devices:
+- Button (from gpiozero)
+- RotaryEncoder (from gpiozero)
+- Obstacle Avoidance Sensor (from gpiozero)
+
+Output Devices:
+- Traffic Light (from gpiozero)
+- Passive Buzzer (from gpiozero)
+- LCD (from RPLCD)
+
+"""
+from gpiozero import Button, RotaryEncoder, DigitalInputDevice
+from gpiozero import LED, TonalBuzzer
+from RPLCD import CharLCD
+import json
+import os
+
+class DeviceManager:
+    def __init__(self, device_config: dict=None):
+        """Initialization of DeviceManager
+
+        If a configuration is provided, it will be used to initialize the devices.
+        Otherwise, the configuration will be loaded from a JSON file
+
+        Args:
+            device_config (dict, optional): Configuration for devices. Defaults to None.
+        """
+
+        if device_config is None:
+            # Load configuration from JSON file
+            device_config = self.get_config()
+
+        if "BTN_Reset" in device_config:
+            self.reset_button = Button_crm(device_config["BTN_Reset"]["params"])
+        else:
+            self.reset_button = None
+
+        if "BTN_Restart" in device_config:
+            self.restart_button = Button_crm(device_config["BTN_Restart"]["params"])
+        else:
+            self.restart_button = None
+
+        if "BTN_Start" in device_config:
+            self.start_button = Button_crm(device_config["BTN_Start"]["params"])
+        else:
+            self.start_button = None
+
+        if "Selector" in device_config:
+            self.selector = Rotary_Encoder_crm(device_config["Selector"]["params"])
+        else:
+            self.selector = None
+
+        if "SNS_Track_1" in device_config:
+            self.track_1_sensor = Sensor_crm(device_config["SNS_Track_1"]["params"])
+        else:
+            self.track_1_sensor = None
+
+        if "SNS_Track_2" in device_config:
+            self.track_2_sensor = Sensor_crm(device_config["SNS_Track_2"]["params"])
+        else:
+            self.track_2_sensor = None
+
+    def get_config(self) -> dict:
+        """Get the current device configuration.
+
+        Search for the configuration in the file crm_config.json successively in 
+        the current directory, ../config or HOME/.config
+
+        Returns:
+            dict: The current device configuration.
+        """
+        config_file = ""
+        curDir = os.path.dirname(os.path.realpath(__file__))
+        if os.path.exists(os.path.join(curDir, "crm_config.json")):
+            config_file = os.path.join(curDir, "crm_config.json")
+        else:
+            curDir = os.path.dirname(curDir)
+            if os.path.exists(os.path.join(curDir, "config/crm_config.json")):
+                config_file = os.path.join(curDir, "config/crm_config.json")
+            else:
+                if os.path.exists(os.path.join(os.getenv("HOME"), ".config", "crm_config.json")):
+                    config_file = os.path.join(os.getenv("HOME"), ".config", "crm_config.json")
+                else:
+                    raise FileNotFoundError("Configuration file crm_config.json not found.")
+
+        with open(config_file, "r") as f:
+            content = json.load(f)
+
+            if "devices" in content:
+                return content["devices"]
+            else:
+                raise KeyError("The configuration file does not contain 'devices' key.")
+            
+    def register_BTN_Reset_pressed_callback(self, callback):
+        """Register a callback function for the reset button press event.
+
+        Args:
+            callback (function): The function to be called when the reset button is pressed.
+        """
+        if self.reset_button:
+            self.reset_button.when_pressed = callback
+            
+    def register_BTN_Restart_pressed_callback(self, callback):
+        """Register a callback function for the restart button press event.
+
+        Args:
+            callback (function): The function to be called when the restart button is pressed.
+        """
+        if self.restart_button:
+            self.restart_button.when_pressed = callback
+            
+    def register_BTN_Start_pressed_callback(self, callback):
+        """Register a callback function for the start button press event.
+
+        Args:
+            callback (function): The function to be called when the start button is pressed.
+        """
+        if self.start_button:
+            self.start_button.when_pressed = callback
+
+    def register_Selector_rotated_clockwise_callback(self, callback):
+        """Register a callback function for the selector rotated clockwise event.
+
+        Args:
+            callback (function): The function to be called when the selector is rotated clockwise.
+        """
+        if self.selector:
+            self.selector.when_rotated_clockwise = callback
+
+    def register_Selector_rotated_counter_clockwise_callback(self, callback):
+        """Register a callback function for the selector rotated counter clockwise event.
+
+        Args:
+            callback (function): The function to be called when the selector is rotated counterclockwise.
+        """
+        if self.selector:
+            self.selector.when_rotated_counter_clockwise = callback
+
+    def register_Track_1_Car_detected_callback(self, callback):
+        """Register a callback function for the Track 1 car detected event.
+
+        Args:
+            callback (function): The function to be called when a car is detected on Track 1.
+        """
+        if self.track_1_sensor:
+            self.track_1_sensor.when_deactivated = callback
+
+    def register_Track_2_Car_detected_callback(self, callback):
+        """Register a callback function for the Track 2 car detected event.
+
+        Args:
+            callback (function): The function to be called when a car is detected on Track 2.
+        """
+        if self.track_2_sensor:
+            self.track_2_sensor.when_deactivated = callback
+
+    def register_Track_1_Car_cleared_callback(self, callback):
+        """Register a callback function for the Track 1 car cleared event.
+
+        Args:
+            callback (function): The function to be called when a car is no longer detected on Track 1.
+        """
+        if self.track_1_sensor:
+            self.track_1_sensor.when_activated = callback
+
+    def register_Track_2_Car_cleared_callback(self, callback):
+        """Register a callback function for the Track 2 car cleared event.
+
+        Args:
+            callback (function): The function to be called when a car is no longer detected on Track 2.
+        """
+        if self.track_2_sensor:
+            self.track_2_sensor.when_activated = callback
+
+class Button_crm(Button):
+    def __init__(self, params: dict):
+        gpio_pin = params.get("GPIO_pin")
+        bounce_time = params.get("bounce_time", 0.1)
+        super().__init__(gpio_pin, bounce_time=bounce_time)
+
+class Rotary_Encoder_crm(RotaryEncoder):
+    def __init__(self, params: dict):
+        self.gpio_pin_SW = params.get("GPIO_pin_SW")
+        self.gpio_pin_DT = params.get("GPIO_pin_DT")
+        self.gpio_pin_CLK = params.get("GPIO_pin_CLK")
+        super().__init__(a=self.gpio_pin_CLK, b=self.gpio_pin_DT, wrap=True, max_steps=32)
+
+class Sensor_crm(DigitalInputDevice):
+    def __init__(self, params: dict):
+        gpio_pin = params.get("GPIO_pin")
+        bounce_time = params.get("bounce_time", 0.1)
+        super().__init__(gpio_pin, bounce_time=bounce_time)
+
+
+if __name__ == "__main__":
+    # Example usage
+    from datetime import datetime as dt
+
+    device_manager = DeviceManager()
+
+    # Test Buttons
+    if device_manager.reset_button:
+        print("Reset button initialized.")
+    else:
+        print("Reset button not found in configuration.")
+
+    if device_manager.restart_button:
+        print("Restart button initialized.")
+    else:
+        print("Restart button not found in configuration.")
+
+    if device_manager.start_button:
+        print("Start button initialized.")
+    else:
+        print("Start button not found in configuration.")
+
+    def on_reset_button_pressed():
+        print(f"{dt.now()}: Reset button pressed.")
+
+    def on_restart_button_pressed():
+        print(f"{dt.now()}: Restart button pressed.")
+
+    def on_start_button_pressed():
+        print(f"{dt.now()}: Start button pressed.")
+
+    device_manager.register_BTN_Reset_pressed_callback(on_reset_button_pressed)
+    device_manager.register_BTN_Restart_pressed_callback(on_restart_button_pressed)
+    device_manager.register_BTN_Start_pressed_callback(on_start_button_pressed)
+
+    # Test Selector
+    if device_manager.selector:
+        print("Selector initialized.")
+    else:
+        print("Selector not found in configuration.")
+
+    def on_selector_rotated_clockwise():
+        print(f"{dt.now()}: Selector rotated clockwise.")
+
+    def on_selector_rotated_counter_clockwise():
+        print(f"{dt.now()}: Selector rotated counter-clockwise.")
+    device_manager.register_Selector_rotated_clockwise_callback(on_selector_rotated_clockwise)
+    device_manager.register_Selector_rotated_counter_clockwise_callback(on_selector_rotated_counter_clockwise)
+
+    # Test Track Sensors
+    if device_manager.track_1_sensor:
+        print("Track 1 sensor initialized.")
+    else:
+        print("Track 1 sensor not found in configuration.")
+
+    if device_manager.track_2_sensor:
+        print("Track 2 sensor initialized.")
+    else:
+        print("Track 2 sensor not found in configuration.")
+
+    def on_track_1_car_detected():
+        print(f"{dt.now()}: Track 1 car detected.")
+
+    def on_track_1_car_cleared():
+        print(f"{dt.now()}: Track 1 car cleared.")
+
+    def on_track_2_car_detected():
+        print(f"{dt.now()}: Track 2 car detected.")
+
+    def on_track_2_car_cleared():
+        print(f"{dt.now()}: Track 2 car cleared.")
+
+    device_manager.register_Track_1_Car_detected_callback(on_track_1_car_detected)
+    device_manager.register_Track_1_Car_cleared_callback(on_track_1_car_cleared)
+    device_manager.register_Track_2_Car_detected_callback(on_track_2_car_detected)
+    device_manager.register_Track_2_Car_cleared_callback(on_track_2_car_cleared)
+
+
+    # Keep the script running to listen for button presses
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        print("Exiting...")
