@@ -20,6 +20,7 @@ from gpiozero import LED, TonalBuzzer
 from RPLCD import CharLCD
 import json
 import os
+import time
 
 class DeviceManager:
     def __init__(self, device_config: dict=None):
@@ -75,6 +76,11 @@ class DeviceManager:
             self.traffic_light_track_2 = Traffic_Light_crm(device_config["TRL_Track_2"]["params"])
         else:
             self.traffic_light_track_2 = None
+
+        if "Speaker" in device_config:
+            self.speaker = Speaker_crm(device_config["Speaker"]["params"])
+        else:
+            self.speaker = None
 
     def get_config(self) -> dict:
         """Get the current device configuration.
@@ -237,11 +243,55 @@ class Traffic_Light_crm():
         self.yellow.off()
         self.green.off()
 
+class Speaker_crm():
+    def __init__(self, params: dict):
+        self.gpio_pin = params.get("GPIO_pin")
+        self.speaker = TonalBuzzer(self.gpio_pin)
+
+    def play_fanfare(self):
+        fanfare = [
+            ("A3", 0.20),
+            ("E4", 0.20),
+            ("A4", 0.30),
+            ("C5", 0.20),
+            ("E5", 0.30),
+            ("A4", 0.15),
+            ("E5", 0.20),
+            ("A5", 1.10),
+        ]
+        for note, duration in fanfare:
+            self.speaker.play(note)
+            time.sleep(duration)
+            self.speaker.stop()
+            time.sleep(0.05)
+
+    def play_alarm(self):
+        alarm = [
+            ("A4", 0.15),
+            ("B4", 0.15),
+            ("C5", 0.15),
+            ("D5", 0.15),
+            ("E5", 0.15),
+            ("D5", 0.15),
+            ("C5", 0.15),
+            ("B4", 0.15),
+        ]
+
+        for _ in range(3):
+            for note, duration in alarm:
+                self.speaker.play(note)
+                time.sleep(duration)
+
+        self.speaker.stop()
+        time.sleep(0.05)
+
+    def off(self):
+        self.speaker.stop()
 
 if __name__ == "__main__":
     # Example usage
     from datetime import datetime as dt
-    import time
+    import threading
 
     device_manager = DeviceManager()
 
@@ -348,11 +398,33 @@ if __name__ == "__main__":
 
     # Show traffic lights in own thread
     print("Starting Traffic Light Cycle: Red, Yellow, Green, Off")
-    import threading
     traffic_lights_thread = threading.Thread(target=show_traffic_lights)
     traffic_lights_stop = False
     traffic_lights_thread.daemon = True
     traffic_lights_thread.start()
+
+    def show_speaker():
+        spk = device_manager.speaker
+        while not speaker_stop:
+            spk.play_fanfare()
+            time.sleep(5)
+            spk.play_alarm()
+            time.sleep(5)
+            spk.off()
+
+    # Show speaker in own thread
+    spk = device_manager.speaker.speaker
+    print("Speaker Info:")
+    print(f"Speaker max_tone: {spk.max_tone}")
+    print(f"Speaker min_tone: {spk.min_tone}")
+    print(f"Speaker mid_tone: {spk.mid_tone}")
+    print(f"Speaker octaves: {spk.octaves}")
+    print()
+    print("Starting Speaker Cycle: Fanfare")
+    speaker_thread = threading.Thread(target=show_speaker)
+    speaker_stop = False
+    speaker_thread.daemon = True
+    speaker_thread.start()
 
     # Keep the script running to listen for button presses
     try:
@@ -364,3 +436,7 @@ if __name__ == "__main__":
             traffic_lights_stop = True
             time.sleep(1)
             traffic_lights_thread.join()
+        if speaker_thread.is_alive():
+            speaker_stop = True
+            time.sleep(1)
+            speaker_thread.join()
