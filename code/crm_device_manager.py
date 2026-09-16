@@ -66,6 +66,16 @@ class DeviceManager:
         else:
             self.track_2_sensor = None
 
+        if "TRL_Track_1" in device_config:
+            self.traffic_light_track_1 = Traffic_Light_crm(device_config["TRL_Track_1"]["params"])
+        else:
+            self.traffic_light_track_1 = None
+
+        if "TRL_Track_2" in device_config:
+            self.traffic_light_track_2 = Traffic_Light_crm(device_config["TRL_Track_2"]["params"])
+        else:
+            self.traffic_light_track_2 = None
+
     def get_config(self) -> dict:
         """Get the current device configuration.
 
@@ -197,10 +207,41 @@ class Sensor_crm(DigitalInputDevice):
         bounce_time = params.get("bounce_time", 0.1)
         super().__init__(gpio_pin, bounce_time=bounce_time)
 
+class Traffic_Light_crm():
+    def __init__(self, params: dict):
+        self.gpio_pin_red = params.get("GPIO_pin_red")
+        self.gpio_pin_yellow = params.get("GPIO_pin_yellow")
+        self.gpio_pin_green = params.get("GPIO_pin_green")
+        # Initialize the traffic light pins as output devices
+        self.red = LED(self.gpio_pin_red)
+        self.yellow = LED(self.gpio_pin_yellow)
+        self.green = LED(self.gpio_pin_green)
+
+    def set_red(self):
+        self.red.on()
+        self.yellow.off()
+        self.green.off()
+
+    def set_yellow(self):
+        self.red.on()
+        self.yellow.on()
+        self.green.off()
+
+    def set_green(self):
+        self.red.off()
+        self.yellow.off()
+        self.green.on()
+
+    def turn_off(self):
+        self.red.off()
+        self.yellow.off()
+        self.green.off()
+
 
 if __name__ == "__main__":
     # Example usage
     from datetime import datetime as dt
+    import time
 
     device_manager = DeviceManager()
 
@@ -275,6 +316,43 @@ if __name__ == "__main__":
     device_manager.register_Track_2_Car_detected_callback(on_track_2_car_detected)
     device_manager.register_Track_2_Car_cleared_callback(on_track_2_car_cleared)
 
+    # Traffic Lights
+    if device_manager.traffic_light_track_1:
+        print("Traffic light for Track 1 initialized.")
+    else:
+        print("Traffic light for Track 1 not found in configuration.")
+
+    if device_manager.traffic_light_track_2:
+        print("Traffic light for Track 2 initialized.")
+    else:
+        print("Traffic light for Track 2 not found in configuration.")
+
+    def show_traffic_lights():
+        trl_1 = device_manager.traffic_light_track_1
+        trl_2 = device_manager.traffic_light_track_2
+        while not traffic_lights_stop:
+            trl_1.set_red()
+            trl_2.set_red()
+            time.sleep(1)
+            trl_1.set_yellow()
+            trl_2.set_yellow()
+            time.sleep(1)
+            trl_1.set_green()
+            trl_2.set_green()
+            time.sleep(1)
+            trl_1.turn_off()
+            trl_2.turn_off()
+            time.sleep(1)
+        trl_1.turn_off()
+        trl_2.turn_off()
+
+    # Show traffic lights in own thread
+    print("Starting Traffic Light Cycle: Red, Yellow, Green, Off")
+    import threading
+    traffic_lights_thread = threading.Thread(target=show_traffic_lights)
+    traffic_lights_stop = False
+    traffic_lights_thread.daemon = True
+    traffic_lights_thread.start()
 
     # Keep the script running to listen for button presses
     try:
@@ -282,3 +360,7 @@ if __name__ == "__main__":
             pass
     except KeyboardInterrupt:
         print("Exiting...")
+        if traffic_lights_thread.is_alive():
+            traffic_lights_stop = True
+            time.sleep(1)
+            traffic_lights_thread.join()
