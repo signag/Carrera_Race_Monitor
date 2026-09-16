@@ -3,19 +3,19 @@
        "LCD_Track_1": {
             "type": "LCD",
             "params": {
-                "I2C_address": 25
+                "I2C_address": "0x25"
             }
         },
         "LCD_Track_2": {
             "type": "LCD",
             "params": {
-                "I2C_address": 26
+                "I2C_address": "0x26"
             }
         },
         "LCD_Circuit": {
             "type": "LCD",
             "params": {
-                "I2C_address": 27
+                "I2C_address": "0x27"
             }
         },
         "SNS_Track_1": {

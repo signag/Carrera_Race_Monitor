@@ -17,7 +17,7 @@ Output Devices:
 """
 from gpiozero import Button, RotaryEncoder, DigitalInputDevice
 from gpiozero import LED, TonalBuzzer
-from RPLCD import CharLCD
+from RPLCD.i2c import CharLCD
 import json
 import os
 import time
@@ -81,6 +81,22 @@ class DeviceManager:
             self.speaker = Speaker_crm(device_config["Speaker"]["params"])
         else:
             self.speaker = None
+
+        if "LCD_Track_1" in device_config:
+            self.lcd_track_1 = LCD_crm(device_config["LCD_Track_1"]["params"])
+        else:
+            self.lcd_track_1 = None
+
+        if "LCD_Track_2" in device_config:
+            self.lcd_track_2 = LCD_crm(device_config["LCD_Track_2"]["params"])
+        else:
+            self.lcd_track_2 = None
+
+        if "LCD_Circuit" in device_config:
+            self.lcd_circuit = LCD_crm(device_config["LCD_Circuit"]["params"])
+        else:
+            self.lcd_circuit = None
+
 
     def get_config(self) -> dict:
         """Get the current device configuration.
@@ -288,6 +304,21 @@ class Speaker_crm():
     def off(self):
         self.speaker.stop()
 
+class LCD_crm():
+    def __init__(self, params: dict):
+        self.i2c_address = params.get("I2C_address")
+        self.lcd = CharLCD('PCF8574',int(self.i2c_address, 16), cols=16, rows=2, dotsize=8)
+        self.lcd.backlight_enabled = False
+
+    def display_message(self, message: str):
+        self.lcd.clear()
+        self.lcd.backlight_enabled = True
+        self.lcd.write_string(message)
+
+    def off(self):
+        self.lcd.clear()
+        self.lcd.backlight_enabled = False
+
 if __name__ == "__main__":
     # Example usage
     from datetime import datetime as dt
@@ -426,6 +457,67 @@ if __name__ == "__main__":
     speaker_thread.daemon = True
     speaker_thread.start()
 
+    # LCD Displays
+    if device_manager.lcd_track_1:
+        print("LCD for Track 1 initialized.")
+    else:
+        print("LCD for Track 1 not found in configuration.")
+
+    if device_manager.lcd_track_2:
+        print("LCD for Track 2 initialized.")
+    else:
+        print("LCD for Track 2 not found in configuration.")
+
+    if device_manager.lcd_circuit:
+        print("LCD for Circuit initialized.")
+    else:
+        print("LCD for Circuit not found in configuration.")
+
+    def show_lcd_track_1():
+        lcd = device_manager.lcd_track_1
+        while not lcd_track_1_stop:
+            lcd.display_message("Track 1 Info")
+            time.sleep(5)
+            lcd.off()
+            time.sleep(1)
+
+    # Show LCD for Track 1 in own thread
+    if device_manager.lcd_track_1:
+        lcd_track_1_stop = False
+        lcd_track_1_thread = threading.Thread(target=show_lcd_track_1)
+        lcd_track_1_thread.daemon = True
+        lcd_track_1_thread.start()
+
+    def show_lcd_track_2():
+        lcd = device_manager.lcd_track_2
+        while not lcd_track_2_stop:
+            lcd.display_message("Track 2 Info")
+            time.sleep(5)
+            lcd.off()
+            time.sleep(1)
+
+    # Show LCD for Track 2 in own thread
+    if device_manager.lcd_track_2:
+        lcd_track_2_stop = False
+        lcd_track_2_thread = threading.Thread(target=show_lcd_track_2)
+        lcd_track_2_thread.daemon = True
+        lcd_track_2_thread.start()
+
+    def show_lcd_circuit():
+        lcd = device_manager.lcd_circuit
+        while not lcd_circuit_stop:
+            lcd.display_message("Circuit Info")
+            time.sleep(5)
+            lcd.off()
+            time.sleep(1)
+
+    # Show LCD for Circuit in own thread
+    if device_manager.lcd_circuit:
+        lcd_circuit_stop = False
+        lcd_circuit_thread = threading.Thread(target=show_lcd_circuit)
+        lcd_circuit_thread.daemon = True
+        lcd_circuit_thread.start()
+
     # Keep the script running to listen for button presses
     try:
         while True:
@@ -440,3 +532,15 @@ if __name__ == "__main__":
             speaker_stop = True
             time.sleep(1)
             speaker_thread.join()
+        if lcd_track_1_thread.is_alive():
+            lcd_track_1_stop = True
+            time.sleep(1)
+            lcd_track_1_thread.join()
+        if lcd_track_2_thread.is_alive():
+            lcd_track_2_stop = True
+            time.sleep(1)
+            lcd_track_2_thread.join()
+        if lcd_circuit_thread.is_alive():
+            lcd_circuit_stop = True
+            time.sleep(1)
+            lcd_circuit_thread.join()
