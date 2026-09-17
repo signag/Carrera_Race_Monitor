@@ -54,8 +54,10 @@ class DeviceManager:
 
         if "Selector" in device_config:
             self.selector = Rotary_Encoder_crm(device_config["Selector"]["params"])
+            self.selector_button = Rotary_Encoder_Button_crm(device_config["Selector"]["params"])
         else:
             self.selector = None
+            self.selector_button = None
 
         if "SNS_Track_1" in device_config:
             self.track_1_sensor = Sensor_crm(device_config["SNS_Track_1"]["params"])
@@ -173,6 +175,15 @@ class DeviceManager:
         """
         if self.selector:
             self.selector.when_rotated_counter_clockwise = callback
+            
+    def register_Selector_Button_pressed_callback(self, callback):
+        """Register a callback function for the selector button press event.
+
+        Args:
+            callback (function): The function to be called when the selector button is pressed.
+        """
+        if self.selector_button:
+            self.selector_button.when_pressed = callback
 
     def register_Track_1_Car_detected_callback(self, callback):
         """Register a callback function for the Track 1 car detected event.
@@ -222,6 +233,12 @@ class Rotary_Encoder_crm(RotaryEncoder):
         self.gpio_pin_DT = params.get("GPIO_pin_DT")
         self.gpio_pin_CLK = params.get("GPIO_pin_CLK")
         super().__init__(a=self.gpio_pin_CLK, b=self.gpio_pin_DT, wrap=True, max_steps=32)
+
+class Rotary_Encoder_Button_crm(Button):
+    def __init__(self, params: dict):
+        self.gpio_pin_SW = params.get("GPIO_pin_SW")
+        bounce_time = params.get("bounce_time", 0.1)
+        super().__init__(self.gpio_pin_SW, bounce_time=bounce_time)
 
 class Sensor_crm(DigitalInputDevice):
     def __init__(self, params: dict):
@@ -315,18 +332,27 @@ class LCD_crm():
         self.lcd.backlight_enabled = True
         self.lcd.write_string(message)
 
+    def write_to_position(self, message: str, row: int, col: int):
+        self.lcd.cursor_pos = (row, col)
+        self.lcd.write_string(message)
+
     def off(self):
         self.lcd.clear()
         self.lcd.backlight_enabled = False
 
 if __name__ == "__main__":
-    # Example usage
+    """Demo & Test for CRM Device Manager
+
+       The test will initialize all devices and execute basic functionality tests for each.
+    """
     from datetime import datetime as dt
     import threading
 
     device_manager = DeviceManager()
 
+    ##############
     # Test Buttons
+    ##############
     if device_manager.reset_button:
         print("Reset button initialized.")
     else:
@@ -355,7 +381,9 @@ if __name__ == "__main__":
     device_manager.register_BTN_Restart_pressed_callback(on_restart_button_pressed)
     device_manager.register_BTN_Start_pressed_callback(on_start_button_pressed)
 
+    ###############
     # Test Selector
+    ###############
     if device_manager.selector:
         print("Selector initialized.")
     else:
@@ -369,7 +397,22 @@ if __name__ == "__main__":
     device_manager.register_Selector_rotated_clockwise_callback(on_selector_rotated_clockwise)
     device_manager.register_Selector_rotated_counter_clockwise_callback(on_selector_rotated_counter_clockwise)
 
+    ######################
+    # Test Selector Button
+    ######################
+    if device_manager.selector_button:
+        print("Selector button initialized.")
+    else:
+        print("Selector button not found in configuration.")
+
+    def on_selector_button_pressed():
+        print(f"{dt.now()}: Selector button pressed.")
+
+    device_manager.register_Selector_Button_pressed_callback(on_selector_button_pressed)
+
+    ####################
     # Test Track Sensors
+    ####################
     if device_manager.track_1_sensor:
         print("Track 1 sensor initialized.")
     else:
@@ -397,7 +440,9 @@ if __name__ == "__main__":
     device_manager.register_Track_2_Car_detected_callback(on_track_2_car_detected)
     device_manager.register_Track_2_Car_cleared_callback(on_track_2_car_cleared)
 
+    ################
     # Traffic Lights
+    ################
     if device_manager.traffic_light_track_1:
         print("Traffic light for Track 1 initialized.")
     else:
@@ -434,6 +479,9 @@ if __name__ == "__main__":
     traffic_lights_thread.daemon = True
     traffic_lights_thread.start()
 
+    ################
+    # Test Speaker
+    ################
     def show_speaker():
         spk = device_manager.speaker
         while not speaker_stop:
@@ -457,7 +505,9 @@ if __name__ == "__main__":
     speaker_thread.daemon = True
     speaker_thread.start()
 
+    ################
     # LCD Displays
+    ################
     if device_manager.lcd_track_1:
         print("LCD for Track 1 initialized.")
     else:
@@ -476,7 +526,7 @@ if __name__ == "__main__":
     def show_lcd_track_1():
         lcd = device_manager.lcd_track_1
         while not lcd_track_1_stop:
-            lcd.display_message("Track 1 Info")
+            lcd.display_message("Track 1 Info\n\rLine 2")
             time.sleep(5)
             lcd.off()
             time.sleep(1)
@@ -491,7 +541,7 @@ if __name__ == "__main__":
     def show_lcd_track_2():
         lcd = device_manager.lcd_track_2
         while not lcd_track_2_stop:
-            lcd.display_message("Track 2 Info")
+            lcd.display_message("Track 2 Info\n\rLine 2")
             time.sleep(5)
             lcd.off()
             time.sleep(1)
@@ -506,7 +556,7 @@ if __name__ == "__main__":
     def show_lcd_circuit():
         lcd = device_manager.lcd_circuit
         while not lcd_circuit_stop:
-            lcd.display_message("Circuit Info")
+            lcd.display_message("Circuit Info\n\rLine 2")
             time.sleep(5)
             lcd.off()
             time.sleep(1)
@@ -518,7 +568,8 @@ if __name__ == "__main__":
         lcd_circuit_thread.daemon = True
         lcd_circuit_thread.start()
 
-    # Keep the script running to listen for button presses
+    # Keep the script running to listen for input device actions
+    # while sumultaneously generating output for output devices
     try:
         while True:
             pass
