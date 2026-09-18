@@ -99,7 +99,6 @@ class DeviceManager:
         else:
             self.lcd_circuit = None
 
-
     def get_config(self) -> dict:
         """Get the current device configuration.
 

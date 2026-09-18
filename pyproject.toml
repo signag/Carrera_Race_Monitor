@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+[tool.setuptools.packages.find]
+include = ["code*"]
+[project]
+name = "Carrera_Race_Monitor"
+version = "0.0.1"
+dependencies = [
+    "gpiozero>=2.0.0",
+    "RPLCD>=1.4.0",
+    "paho-mqtt>=2.1.0",
+    "flask>=3.1.3",
+    "flask-socketio>=5.6.0",
+    "flask-cors>=6.0.5",
+]
+authors = [
+  { name="signag", email="siegfried.nagel@t-online.de" },
+]
+description = "A monitor for Carrera races"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+[project.urls]
+Homepage = "https://github.com/signag/Carrera_Race_Monitor"
+Issues = "https://github.com/signag/Carrera_Race_Monitor/issues"
+Repository = "https://github.com/signag/Carrera_Race_Monitor"
