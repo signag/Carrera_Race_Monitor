@@ -28,7 +28,7 @@ Path(logFile).touch(exist_ok=True)
 filehandler = logging.FileHandler(logFile)
 filehandler.setFormatter(app.logger.handlers[0].formatter)
 logger = app.logger
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 logger.addHandler(filehandler)
 #
 # Set up messaging client

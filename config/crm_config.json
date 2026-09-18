@@ -1,4 +1,13 @@
 {
+    "config": {
+        "lng": "en",
+        "tracks": {
+            "Track_1": true,
+            "Track_2": true
+        },
+        "start_control": false,
+        "race_mode": "OPEN"
+    },
     "devices": {
        "LCD_Track_1": {
             "type": "LCD",

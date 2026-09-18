@@ -22,6 +22,159 @@ import json
 import os
 import time
 
+class Traffic_Light_crm():
+    def __init__(self, params: dict):
+        self.gpio_pin_red = params.get("GPIO_pin_red")
+        self.gpio_pin_yellow = params.get("GPIO_pin_yellow")
+        self.gpio_pin_green = params.get("GPIO_pin_green")
+        # Initialize the traffic light pins as output devices
+        self.red = LED(self.gpio_pin_red)
+        self.yellow = LED(self.gpio_pin_yellow)
+        self.green = LED(self.gpio_pin_green)
+
+    def set_red(self):
+        self.red.on()
+        self.yellow.off()
+        self.green.off()
+
+    def set_yellow(self):
+        self.red.on()
+        self.yellow.on()
+        self.green.off()
+
+    def set_green(self):
+        self.red.off()
+        self.yellow.off()
+        self.green.on()
+
+    def turn_off(self):
+        self.red.off()
+        self.yellow.off()
+        self.green.off()
+
+    def alarm(self):
+        self.red.blink(on_time=0.5, off_time=0.5)
+        self.yellow.blink(on_time=0.5, off_time=0.5)
+        self.green.blink(on_time=0.5, off_time=0.5)
+
+class Speaker_crm():
+    def __init__(self, params: dict):
+        self.gpio_pin = params.get("GPIO_pin")
+        self.speaker = TonalBuzzer(self.gpio_pin)
+
+    def play_fanfare(self):
+        fanfare = [
+            ("A3", 0.20),
+            ("E4", 0.20),
+            ("A4", 0.30),
+            ("C5", 0.20),
+            ("E5", 0.30),
+            ("A4", 0.15),
+            ("E5", 0.20),
+            ("A5", 1.10),
+        ]
+        for note, duration in fanfare:
+            self.speaker.play(note)
+            time.sleep(duration)
+            self.speaker.stop()
+            time.sleep(0.05)
+
+    def play_alarm(self):
+        alarm = [
+            ("A4", 0.15),
+            ("B4", 0.15),
+            ("C5", 0.15),
+            ("D5", 0.15),
+            ("E5", 0.15),
+            ("D5", 0.15),
+            ("C5", 0.15),
+            ("B4", 0.15),
+        ]
+
+        for _ in range(3):
+            for note, duration in alarm:
+                self.speaker.play(note)
+                time.sleep(duration)
+
+        self.speaker.stop()
+        time.sleep(0.05)
+
+    def off(self):
+        self.speaker.stop()
+
+class LCD_crm():
+    def __init__(self, params: dict):
+        self.i2c_address = params.get("I2C_address")
+        self.lcd = CharLCD('PCF8574',int(self.i2c_address, 16), cols=16, rows=2, dotsize=8)
+        self.lcd.backlight_enabled = False
+
+    def display_message(self, message: str):
+        self.lcd.clear()
+        self.lcd.backlight_enabled = True
+        self.lcd.write_string(message)
+
+    def write_to_position(self, row: int, col: int, message: str):
+        self.lcd.cursor_pos = (row, col)
+        self.lcd.write_string(message)
+
+    def clear(self):
+        self.lcd.backlight_enabled = True
+        self.lcd.clear()
+
+    def off(self):
+        self.lcd.clear()
+        self.lcd.backlight_enabled = False
+
+
+class Button_crm(Button):
+    def __init__(self, params: dict):
+        gpio_pin = params.get("GPIO_pin")
+        bounce_time = params.get("bounce_time", 0.1)
+        super().__init__(gpio_pin, bounce_time=bounce_time)
+
+class Rotary_Encoder_crm(RotaryEncoder):
+    def __init__(self, params: dict):
+        self.gpio_pin_SW = params.get("GPIO_pin_SW")
+        self.gpio_pin_DT = params.get("GPIO_pin_DT")
+        self.gpio_pin_CLK = params.get("GPIO_pin_CLK")
+        super().__init__(a=self.gpio_pin_CLK, b=self.gpio_pin_DT, wrap=True, max_steps=32)
+
+class Rotary_Encoder_Button_crm(Button):
+    def __init__(self, params: dict):
+        self.gpio_pin_SW = params.get("GPIO_pin_SW")
+        bounce_time = params.get("bounce_time", 0.1)
+        super().__init__(self.gpio_pin_SW, bounce_time=bounce_time)
+
+class Sensor_crm(DigitalInputDevice):
+    def __init__(self, params: dict):
+        gpio_pin = params.get("GPIO_pin")
+        bounce_time = params.get("bounce_time", 0.1)
+        super().__init__(gpio_pin, bounce_time=bounce_time)
+
+    def is_occupied(self) -> bool:
+        """Check if the sensor is currently detecting an object.
+
+        Returns:
+            bool: True if the sensor is detecting an object, False otherwise.
+        """
+        return not self.value
+
+    def register_Car_detected_callback(self, callback):
+        """Register a callback function for the car detected event.
+
+        Args:
+            callback (function): The function to be called when a car is detected on this track.
+        """
+        self.when_deactivated = callback
+
+    def register_Car_cleared_callback(self, callback):
+        """Register a callback function for the Track 1 car cleared event.
+
+        Args:
+            callback (function): The function to be called when a car is no longer detected on this track.
+        """
+        self.when_activated = callback
+
 class DeviceManager:
     def __init__(self, device_config: dict=None):
         """Initialization of DeviceManager
@@ -60,14 +213,14 @@ class DeviceManager:
             self.selector_button = None
 
         if "SNS_Track_1" in device_config:
-            self.track_1_sensor = Sensor_crm(device_config["SNS_Track_1"]["params"])
+            self.sensor_track_1 = Sensor_crm(device_config["SNS_Track_1"]["params"])
         else:
-            self.track_1_sensor = None
+            self.sensor_track_1 = None
 
         if "SNS_Track_2" in device_config:
-            self.track_2_sensor = Sensor_crm(device_config["SNS_Track_2"]["params"])
+            self.sensor_track_2 = Sensor_crm(device_config["SNS_Track_2"]["params"])
         else:
-            self.track_2_sensor = None
+            self.sensor_track_2 = None
 
         if "TRL_Track_1" in device_config:
             self.traffic_light_track_1 = Traffic_Light_crm(device_config["TRL_Track_1"]["params"])
@@ -129,6 +282,30 @@ class DeviceManager:
                 return content["devices"]
             else:
                 raise KeyError("The configuration file does not contain 'devices' key.")
+
+    def get_traffic_light(self, track_name: str) -> Traffic_Light_crm:
+        if track_name == "Track_1":
+            return self.traffic_light_track_1
+        elif track_name == "Track_2":
+            return self.traffic_light_track_2
+        else:
+            return None
+
+    def get_sensor(self, track_name: str) -> Sensor_crm:
+        if track_name == "Track_1":
+            return self.sensor_track_1
+        elif track_name == "Track_2":
+            return self.sensor_track_2
+        else:
+            return None
+
+    def get_lcd(self, track_name: str) -> LCD_crm:
+        if track_name == "Track_1":
+            return self.lcd_track_1
+        elif track_name == "Track_2":
+            return self.lcd_track_2
+        else:
+            return None
             
     def register_BTN_Reset_pressed_callback(self, callback):
         """Register a callback function for the reset button press event.
@@ -183,161 +360,6 @@ class DeviceManager:
         """
         if self.selector_button:
             self.selector_button.when_pressed = callback
-
-    def register_Track_1_Car_detected_callback(self, callback):
-        """Register a callback function for the Track 1 car detected event.
-
-        Args:
-            callback (function): The function to be called when a car is detected on Track 1.
-        """
-        if self.track_1_sensor:
-            self.track_1_sensor.when_deactivated = callback
-
-    def register_Track_2_Car_detected_callback(self, callback):
-        """Register a callback function for the Track 2 car detected event.
-
-        Args:
-            callback (function): The function to be called when a car is detected on Track 2.
-        """
-        if self.track_2_sensor:
-            self.track_2_sensor.when_deactivated = callback
-
-    def register_Track_1_Car_cleared_callback(self, callback):
-        """Register a callback function for the Track 1 car cleared event.
-
-        Args:
-            callback (function): The function to be called when a car is no longer detected on Track 1.
-        """
-        if self.track_1_sensor:
-            self.track_1_sensor.when_activated = callback
-
-    def register_Track_2_Car_cleared_callback(self, callback):
-        """Register a callback function for the Track 2 car cleared event.
-
-        Args:
-            callback (function): The function to be called when a car is no longer detected on Track 2.
-        """
-        if self.track_2_sensor:
-            self.track_2_sensor.when_activated = callback
-
-class Button_crm(Button):
-    def __init__(self, params: dict):
-        gpio_pin = params.get("GPIO_pin")
-        bounce_time = params.get("bounce_time", 0.1)
-        super().__init__(gpio_pin, bounce_time=bounce_time)
-
-class Rotary_Encoder_crm(RotaryEncoder):
-    def __init__(self, params: dict):
-        self.gpio_pin_SW = params.get("GPIO_pin_SW")
-        self.gpio_pin_DT = params.get("GPIO_pin_DT")
-        self.gpio_pin_CLK = params.get("GPIO_pin_CLK")
-        super().__init__(a=self.gpio_pin_CLK, b=self.gpio_pin_DT, wrap=True, max_steps=32)
-
-class Rotary_Encoder_Button_crm(Button):
-    def __init__(self, params: dict):
-        self.gpio_pin_SW = params.get("GPIO_pin_SW")
-        bounce_time = params.get("bounce_time", 0.1)
-        super().__init__(self.gpio_pin_SW, bounce_time=bounce_time)
-
-class Sensor_crm(DigitalInputDevice):
-    def __init__(self, params: dict):
-        gpio_pin = params.get("GPIO_pin")
-        bounce_time = params.get("bounce_time", 0.1)
-        super().__init__(gpio_pin, bounce_time=bounce_time)
-
-class Traffic_Light_crm():
-    def __init__(self, params: dict):
-        self.gpio_pin_red = params.get("GPIO_pin_red")
-        self.gpio_pin_yellow = params.get("GPIO_pin_yellow")
-        self.gpio_pin_green = params.get("GPIO_pin_green")
-        # Initialize the traffic light pins as output devices
-        self.red = LED(self.gpio_pin_red)
-        self.yellow = LED(self.gpio_pin_yellow)
-        self.green = LED(self.gpio_pin_green)
-
-    def set_red(self):
-        self.red.on()
-        self.yellow.off()
-        self.green.off()
-
-    def set_yellow(self):
-        self.red.on()
-        self.yellow.on()
-        self.green.off()
-
-    def set_green(self):
-        self.red.off()
-        self.yellow.off()
-        self.green.on()
-
-    def turn_off(self):
-        self.red.off()
-        self.yellow.off()
-        self.green.off()
-
-class Speaker_crm():
-    def __init__(self, params: dict):
-        self.gpio_pin = params.get("GPIO_pin")
-        self.speaker = TonalBuzzer(self.gpio_pin)
-
-    def play_fanfare(self):
-        fanfare = [
-            ("A3", 0.20),
-            ("E4", 0.20),
-            ("A4", 0.30),
-            ("C5", 0.20),
-            ("E5", 0.30),
-            ("A4", 0.15),
-            ("E5", 0.20),
-            ("A5", 1.10),
-        ]
-        for note, duration in fanfare:
-            self.speaker.play(note)
-            time.sleep(duration)
-            self.speaker.stop()
-            time.sleep(0.05)
-
-    def play_alarm(self):
-        alarm = [
-            ("A4", 0.15),
-            ("B4", 0.15),
-            ("C5", 0.15),
-            ("D5", 0.15),
-            ("E5", 0.15),
-            ("D5", 0.15),
-            ("C5", 0.15),
-            ("B4", 0.15),
-        ]
-
-        for _ in range(3):
-            for note, duration in alarm:
-                self.speaker.play(note)
-                time.sleep(duration)
-
-        self.speaker.stop()
-        time.sleep(0.05)
-
-    def off(self):
-        self.speaker.stop()
-
-class LCD_crm():
-    def __init__(self, params: dict):
-        self.i2c_address = params.get("I2C_address")
-        self.lcd = CharLCD('PCF8574',int(self.i2c_address, 16), cols=16, rows=2, dotsize=8)
-        self.lcd.backlight_enabled = False
-
-    def display_message(self, message: str):
-        self.lcd.clear()
-        self.lcd.backlight_enabled = True
-        self.lcd.write_string(message)
-
-    def write_to_position(self, message: str, row: int, col: int):
-        self.lcd.cursor_pos = (row, col)
-        self.lcd.write_string(message)
-
-    def off(self):
-        self.lcd.clear()
-        self.lcd.backlight_enabled = False
 
 if __name__ == "__main__":
     """Demo & Test for CRM Device Manager
@@ -412,32 +434,37 @@ if __name__ == "__main__":
     ####################
     # Test Track Sensors
     ####################
-    if device_manager.track_1_sensor:
-        print("Track 1 sensor initialized.")
-    else:
-        print("Track 1 sensor not found in configuration.")
-
-    if device_manager.track_2_sensor:
-        print("Track 2 sensor initialized.")
-    else:
-        print("Track 2 sensor not found in configuration.")
-
     def on_track_1_car_detected():
         print(f"{dt.now()}: Track 1 car detected.")
+        print(f"{dt.now()}: Track 1 occupied: {device_manager.sensor_track_1.is_occupied()}.")
 
     def on_track_1_car_cleared():
         print(f"{dt.now()}: Track 1 car cleared.")
+        print(f"{dt.now()}: Track 1 occupied: {device_manager.sensor_track_1.is_occupied()}.")
 
     def on_track_2_car_detected():
         print(f"{dt.now()}: Track 2 car detected.")
+        print(f"{dt.now()}: Track 2 occupied: {device_manager.sensor_track_2.is_occupied()}.")
 
     def on_track_2_car_cleared():
         print(f"{dt.now()}: Track 2 car cleared.")
+        print(f"{dt.now()}: Track 2 occupied: {device_manager.sensor_track_2.is_occupied()}.")
 
-    device_manager.register_Track_1_Car_detected_callback(on_track_1_car_detected)
-    device_manager.register_Track_1_Car_cleared_callback(on_track_1_car_cleared)
-    device_manager.register_Track_2_Car_detected_callback(on_track_2_car_detected)
-    device_manager.register_Track_2_Car_cleared_callback(on_track_2_car_cleared)
+    if device_manager.sensor_track_1:
+        print("Track 1 sensor initialized.")
+        print(f"Track 1 occupied: {device_manager.sensor_track_1.is_occupied()}.")
+        device_manager.sensor_track_1.register_Car_detected_callback(on_track_1_car_detected)
+        device_manager.sensor_track_1.register_Car_cleared_callback(on_track_1_car_cleared)
+    else:
+        print("Track 1 sensor not found in configuration.")
+
+    if device_manager.sensor_track_2:
+        print("Track 2 sensor initialized.")
+        print(f"Track 2 occupied: {device_manager.sensor_track_2.is_occupied()}.")
+        device_manager.sensor_track_2.register_Car_detected_callback(on_track_2_car_detected)
+        device_manager.sensor_track_2.register_Car_cleared_callback(on_track_2_car_cleared)
+    else:
+        print("Track 2 sensor not found in configuration.")
 
     ################
     # Traffic Lights
@@ -468,6 +495,9 @@ if __name__ == "__main__":
             trl_1.turn_off()
             trl_2.turn_off()
             time.sleep(1)
+            trl_1.alarm()
+            trl_2.alarm()
+            time.sleep(3)
         trl_1.turn_off()
         trl_2.turn_off()
 
@@ -555,7 +585,10 @@ if __name__ == "__main__":
     def show_lcd_circuit():
         lcd = device_manager.lcd_circuit
         while not lcd_circuit_stop:
-            lcd.display_message("Circuit Info\n\rLine 2")
+            lcd.display_message("Circuit Info")
+            lcd.write_to_position(1, 0, "1")
+            lcd.write_to_position(1, 4, "5")
+            lcd.write_to_position(1, 14, "16")
             time.sleep(5)
             lcd.off()
             time.sleep(1)
