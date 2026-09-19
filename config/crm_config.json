@@ -2,8 +2,14 @@
     "config": {
         "lng": "en",
         "tracks": {
-            "Track_1": true,
-            "Track_2": true
+            "Track_1": {
+                "enabled": true,
+                "handicap": 0.0
+            },
+            "Track_2": {
+                "enabled": true,
+                "handicap": 0.0
+            }
         },
         "start_control": false,
         "race_mode": "OPEN"

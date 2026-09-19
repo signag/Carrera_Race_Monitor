@@ -114,6 +114,7 @@ class LCD_crm():
         self.lcd.write_string(message)
 
     def write_to_position(self, row: int, col: int, message: str):
+        self.lcd.backlight_enabled = True
         self.lcd.cursor_pos = (row, col)
         self.lcd.write_string(message)
 

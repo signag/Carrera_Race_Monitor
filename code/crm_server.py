@@ -38,6 +38,8 @@ logger.setLevel(logging.DEBUG)
 
 class Race_Monitor:
     def __init__(self):
+        logger.debug("Race_Monitor.__init__ Entry")
+        self._device_manager = None
         self._lng = "en"
         self._tracks = None
         self._instantiated_tracks = []
@@ -45,22 +47,53 @@ class Race_Monitor:
         self._race_mode = "OPEN"
         self._race_time_min = 5
         self._race_laps = 10
+        self._last_reset_press_time = None
+        self._current_setup_step = None
+        self._save_config = False
+        self._handicap = 0.0
+
+        self._modes = {
+            "OPEN": _("OPEN"),
+            "LAPS": _("LAPS"),
+            "TIME": _("TIME (min)")
+        }
 
         # Get configuration
         self.config = self.get_config()
 
         if "config" in self.config:
             self.lng = self.config["config"].get("lng", "en")
-            self.tracks = self.config["config"].get("tracks", {"Track_1": True, "Track_2": True})
+            self.tracks = self.config["config"].get("tracks", 
+                                                    {"Track_1": {
+                                                        "enabled": True,
+                                                        "handicap": 0.0
+                                                    },
+                                                     "Track_2": {
+                                                        "enabled": True,
+                                                        "handicap": 0.0
+                                                     }})
             self.start_control = self.config["config"].get("start_control", False)
             self.race_mode = self.config["config"].get("race_mode", "OPEN")
             self.race_time = self.config["config"].get("race_time_min", 5)
             self.race_laps = self.config["config"].get("race_laps", 10)
 
+        # Check if tracks are instantiated
+        if self._tracks is None or len(self._tracks) < 1:
+            logger.error("No tracks are defined in configuration.")
+            raise ValueError("No tracks are defined in configuration.")
+
         # Initialize the devices
         self.device_manager = DeviceManager(self.config["devices"])
 
         self.restart()
+
+    @property
+    def device_manager(self) -> DeviceManager:
+        return self._device_manager
+
+    @device_manager.setter
+    def device_manager(self, value: DeviceManager):
+        self._device_manager = value
 
     @property
     def lng(self) -> str:
@@ -78,6 +111,41 @@ class Race_Monitor:
     @tracks.setter
     def tracks(self, value: dict):
         self._tracks = value
+
+    @property
+    def enabled_tracks_count(self) -> int:
+        count = 0
+        for track in self._tracks.values():
+            if track.get("enabled", False):
+                count += 1
+        return count
+
+    @property
+    def handicap(self) -> float:
+        return self._handicap
+
+    @handicap.setter
+    def handicap(self, value: float):
+        """Set the handicap
+
+        Args:
+            value (float): handicap in seconds
+                           < 0.0 for first track
+                           > 0.0 for second track
+        """
+        self._handicap = value
+        if len(self._instantiated_tracks) > 1:
+            trk1 = self._instantiated_tracks[0]
+            trk2 = self._instantiated_tracks[1]
+            if value < 0.0:
+                trk1.handicap = abs(value)
+                trk2.handicap = 0.0
+            elif value > 0.0:
+                trk2.handicap = abs(value)
+                trk1.handicap = 0.0
+            elif value == 0.0:
+                trk1.handicap = 0.0
+                trk2.handicap = 0.0
 
     @property
     def start_control(self) -> bool:
@@ -111,6 +179,22 @@ class Race_Monitor:
     def race_laps(self, value: int):
         self._race_laps = value
 
+    @property
+    def last_reset_press_time(self) -> float:
+        return self._last_reset_press_time
+
+    @last_reset_press_time.setter
+    def last_reset_press_time(self, value: float):
+        self._last_reset_press_time = value
+
+    @property
+    def current_setup_step(self) -> str:
+        return self._current_setup_step
+
+    @current_setup_step.setter
+    def current_setup_step(self, value: str):
+        self._current_setup_step = value
+
     def get_config(self) -> dict:
         """Get the race monitor configuration.
 
@@ -120,7 +204,7 @@ class Race_Monitor:
         Returns:
             dict: The current race monitor configuration.
         """
-        logger.debug("get_config Entry")
+        logger.debug("Race_Monitor.get_config Entry")
 
         config_file = ""
         curDir = os.path.dirname(os.path.realpath(__file__))
@@ -145,67 +229,399 @@ class Race_Monitor:
             else:
                 raise KeyError("The configuration file does not contain 'devices' key.")
 
+    def ignore_button_pressed(self):
+        logger.debug("Race_Monitor.ignore_button_pressed Entry")
+        pass
+
+    def reset_button_pressed(self):
+        """Handle a reset button press event
+
+        This will terminate an active race and reset all tracks
+
+        If the time from a previous press is > 2 seconds, the setup mode will be entered.
+        Otherwise, the system will remain in the "off" state with only the
+        reset an restart buttons active
+        """
+        logger.debug("Race_Monitor.reset_button_pressed Entry with last_reset_press_time: %s", self.last_reset_press_time)
+
+        self.cleanup()
+        if self.last_reset_press_time is None or (time.time() - self.last_reset_press_time) > 2:
+            # Enter setup mode
+            self.enter_setup_mode()
+        self.last_reset_press_time = time.time()
+
+    def restart_button_pressed(self):
+        logger.debug("Race_Monitor.restart_button_pressed Entry")
+        self.restart()
+
+    def start_button_pressed(self):
+        logger.debug("Race_Monitor.start_button_pressed Entry")
+        pass
+
+    def selector_button_pressed(self):
+        logger.debug("Race_Monitor.selector_button_pressed Entry")
+        self.next_setup_step()
+
+    def selector_turned_left(self):
+        logger.debug("Race_Monitor.selector_turned_left Entry")
+        lcd = self.device_manager.lcd_circuit
+        if self.current_setup_step == "TRACKS":
+            if len(self._instantiated_tracks) == 0:
+                self.show_selected_tracks()
+            t1 = self._instantiated_tracks[0]
+            if len(self.tracks) == 2:
+                t2 = self._instantiated_tracks[1]
+                if t1.enabled == True:
+                    if t2.enabled == False:
+                        t1.enabled = False
+                        t2.enabled = True
+                    else:
+                        t2.enabled = False
+                else:
+                    t1.enabled = True
+                    t2.enabled = True
+            else:
+                if t1.enabled == False:
+                    t1.enabled = True
+                else:
+                    t1.enabled = False
+            for track in self._instantiated_tracks:
+                name = track.name
+                enabled = track.enabled
+                self.tracks[name]["enabled"] = enabled
+                logger.debug("Race_Monitor.selector_turned_left - Track %s - Enabled: %s", name, enabled)
+            self.show_selected_tracks()
+        elif self.current_setup_step == "RCMODE":
+            if self.race_mode == "OPEN":
+                self.race_mode = "TIME"
+            elif self.race_mode == "LAPS":
+                self.race_mode = "OPEN"
+            elif self.race_mode == "TIME":
+                self.race_mode = "LAPS"
+            lcd.write_to_position(1, 0, " " * 16)
+            lcd.write_to_position(1, 0, self._modes[self.race_mode])
+            if self.race_mode == "TIME":
+                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+            elif self.race_mode == "LAPS":
+                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+        elif self.current_setup_step == "MODDAT":
+            if self.race_mode == "TIME":
+                self.race_time -= 1
+                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+            elif self.race_mode == "LAPS":
+                self.race_laps -= 1
+                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+        elif self.current_setup_step == "STARTC":
+            if self.start_control == True:
+                lcd.write_to_position(1, 0, _("DISABLED"))
+                self.start_control = False
+            else:
+                lcd.write_to_position(1, 0, _("ENABLED"))
+                self.start_control = True
+        elif self.current_setup_step == "HANDIC":
+            self.handicap -= 1.0
+            for track in self._instantiated_tracks:
+                track.show_setup()
+
+    def selector_turned_right(self):
+        logger.debug("Race_Monitor.selector_turned_right Entry")
+        lcd = self.device_manager.lcd_circuit
+        if self.current_setup_step == "TRACKS":
+            if len(self._instantiated_tracks) == 0:
+                self.show_selected_tracks()
+            t1 = self._instantiated_tracks[0]
+            if len(self.tracks) == 2:
+                t2 = self._instantiated_tracks[1]
+                if t1.enabled == True:
+                    if t2.enabled == False:
+                        t2.enabled = True
+                    else:
+                        t1.enabled = False
+                        t2.enabled = True
+                else:
+                    t1.enabled = True
+                    t2.enabled = False
+            else:
+                if t1.enabled == False:
+                    t1.enabled = True
+                else:
+                    t1.enabled = False
+            for track in self._instantiated_tracks:
+                name = track.name
+                enabled = track.enabled
+                self.tracks[name]["enabled"] = enabled
+                logger.debug("Race_Monitor.selector_turned_right - Track %s - Enabled: %s", name, enabled)
+            self.show_selected_tracks()
+        elif self.current_setup_step == "RCMODE":
+            if self.race_mode == "OPEN":
+                self.race_mode = "LAPS"
+            elif self.race_mode == "LAPS":
+                self.race_mode = "TIME"
+            elif self.race_mode == "TIME":
+                self.race_mode = "OPEN"
+            lcd.write_to_position(1, 0, " " * 16)
+            lcd.write_to_position(1, 0, self._modes[self.race_mode])
+            if self.race_mode == "TIME":
+                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+            elif self.race_mode == "LAPS":
+                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+        elif self.current_setup_step == "MODDAT":
+            if self.race_mode == "TIME":
+                self.race_time += 1
+                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+            elif self.race_mode == "LAPS":
+                self.race_laps += 1
+                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+        elif self.current_setup_step == "STARTC":
+            if self.start_control == True:
+                lcd.write_to_position(1, 0, _("DISABLED"))
+                self.start_control = False
+            else:
+                lcd.write_to_position(1, 0, _("ENABLED"))
+                self.start_control = True
+        elif self.current_setup_step == "HANDIC":
+            self.handicap += 1.0
+            for track in self._instantiated_tracks:
+                track.show_setup()
+
+    def enter_setup_mode(self):
+        """Enter the setup mode
+        
+        This will enter the setup mode for the race monitor.
+        The sequence of the setup steps is:
+        1. TRACKS : Configure tracks
+        2. RCMODE : Set race mode and parameters
+        3. MODDAT : Set mode-specific data (time or # of laps)
+        4. STARTC : Enable/disable start control
+        5. HANDIC : Set track handicaps
+        6. SAVCFG : Save configuration
+        """
+        logger.debug("Race_Monitor.enter_setup_mode Entry")
+
+        self.current_setup_step = None
+        self.cleanup()
+
+        # Activate selector
+        self.device_manager.register_Selector_Button_pressed_callback(self.selector_button_pressed)
+        self.device_manager.register_Selector_rotated_clockwise_callback(self.selector_turned_right)
+        self.device_manager.register_Selector_rotated_counter_clockwise_callback(self.selector_turned_left)
+
+        # Set next (first) setup step
+        self.next_setup_step()
+
+    def next_setup_step(self):
+        """Move to the next setup step"""
+        logger.debug("Race_Monitor.next_setup_step: Entry - Current step: %s", self.current_setup_step)
+        lcd = self.device_manager.lcd_circuit
+
+        if self.current_setup_step is None:
+            self.current_setup_step = "TRACKS"
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SELECT TRACKS"))
+            self.show_selected_tracks()
+        elif self.current_setup_step == "TRACKS":
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SELECT MODE"))
+            lcd.write_to_position(1, 0, self._modes[self.race_mode])
+            if self.race_mode == "TIME":
+                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+            elif self.race_mode == "LAPS":
+                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+            self.current_setup_step = "RCMODE"
+        elif self.current_setup_step == "RCMODE" \
+         and self.race_mode in ["LAPS", "TIME"]:
+            if self.race_mode == "TIME":
+                lcd.write_to_position(0, 0, _("SELECT RACE TIME"))
+            elif self.race_mode == "LAPS":
+                lcd.write_to_position(0, 0, _("SELECT # LAPS"))
+            self.current_setup_step = "MODDAT"
+        elif self.current_setup_step == "MODDAT" \
+          or (self.current_setup_step == "RCMODE" and self.race_mode == "OPEN"):
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("START-CONTROL"))
+            if self.start_control == True:
+                lcd.write_to_position(1, 0, _("ENABLED"))
+            else:
+                lcd.write_to_position(1, 0, _("DISABLED"))
+            self.current_setup_step = "STARTC"
+        elif self.current_setup_step == "STARTC" \
+         and self.start_control == True \
+         and self.enabled_tracks_count > 1:
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SELECT HANDICAP"))
+            lcd.write_to_position(1, 0, _("See Tracks"))
+            self.current_setup_step = "HANDIC"
+        elif self.current_setup_step == "HANDIC" \
+          or (self.current_setup_step == "STARTC" and self.start_control == False) \
+          or (self.current_setup_step == "STARTC" and self.enabled_tracks_count < 2)  :
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SAVE CONFIG"))
+            if self._save_config:
+                lcd.write_to_position(1, 0, _("YES"))
+            else:
+                lcd.write_to_position(1, 0, _("NO"))
+            self.current_setup_step = "SAVCFG"
+        elif self.current_setup_step == "SAVCFG":
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SELECT TRACKS"))
+            self.show_selected_tracks()
+            self.current_setup_step = "TRACKS"
+        else:
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SELECT TRACKS"))
+            self.show_selected_tracks()
+            self.current_setup_step = "TRACKS"
+        logger.debug("Race_Monitor.next_setup_step: Exit - New step: %s", self.current_setup_step)
+
+    def show_selected_tracks(self):
+        """Display the selected tracks on the LCDs
+        
+        If a track is enabled, its display will be activated and setup information is shown
+        In addition, enabled tracks are shown on the main LCD display.
+        """
+        logger.debug("Race_Monitor.show_selected_tracks Entry")
+        # Set up tracks
+        if len(self._instantiated_tracks) == 0:
+            for track_name, tr_cfg in self.tracks.items():
+                enabled = tr_cfg.get("enabled", True)
+                handicap = tr_cfg.get("handicap", 0.0)
+                track = Track(name=track_name, 
+                                enabled=enabled,
+                                handicap=handicap,
+                                start_control=self.start_control,
+                                trl=self.device_manager.get_traffic_light(track_name),
+                                sns=self.device_manager.get_sensor(track_name),
+                                lcd=self.device_manager.get_lcd(track_name)
+                                )
+                self._instantiated_tracks.append(track)
+
+        lcd = self.device_manager.lcd_circuit
+        ind = 0
+        lcd.write_to_position(1, 0, " " * 16)
+        for track in self._instantiated_tracks:
+            track.show_setup()
+            if track.enabled:
+                lcd.write_to_position(1, ind, _("TRACK"))
+                lcd.write_to_position(1, ind + 6, track.id)
+            ind += 9
+
     def restart(self):
-      """Restart a race with the previous configuration
+        """Restart a race with the previous configuration
 
-      """
-      logger.debug("Race_Monitor.restart Entry")
+        This will terminate a previous race and clean up all tracks 
+        before restarting with the current configuration.
 
-      # Show race information on the LCD
-      lcd = self.device_manager.lcd_circuit
-      lcd.clear()
-      lcd.write_to_position(1, 0, _("RACE"))
-      lcd.write_to_position(1, 4, ":")
-      if self.race_mode == "OPEN":
-          lcd.write_to_position(1, 5, _("OPEN"))
-      elif self.race_mode == "LAPS":
-          lcd.write_to_position(1, 5, _("LAPS"))
-          lcd.write_to_position(1, 11, str(self.race_laps))
-      elif self.race_mode == "TIME":
-          lcd.write_to_position(1, 5, _("TIME"))
-          lcd.write_to_position(1, 11, str(self.race_time_min))
-      else:
-          lcd.write_to_position(1, 5, _("???"))
+        Also, the setup mode will be terminated.
+        """
+        logger.debug("Race_Monitor.restart Entry")
 
-      # Set up tracks
-      self._instantiated_tracks = []
-      for track_name, enabled in self.tracks.items():
-          track = Track(name=track_name, 
-                        enabled=enabled, 
-                        start_control=self.start_control,
-                        trl=self.device_manager.get_traffic_light(track_name),
-                        sns=self.device_manager.get_sensor(track_name),
-                        lcd=self.device_manager.get_lcd(track_name)
-                        )
-          self._instantiated_tracks.append(track)
-          if enabled:
-              if self.start_control:
-                  track.status = "LINEUP"
-              else:
-                  track.status = "ACTIVE"
+        # Cleanup
+        self.cleanup()
+        self.current_setup_step = None
 
-    def terminate(self):
-        """Terminate the race and reset all tracks."""
-        logger.debug("Race_Monitor.terminate Entry")
+        # Show race information on the LCD
+        lcd = self.device_manager.lcd_circuit
+        lcd.write_to_position(0, 0, _("  RACE MONITOR"))
+        lcd.write_to_position(1, 0, _("RACE"))
+        lcd.write_to_position(1, 4, ":")
+        if self.race_mode == "OPEN":
+            lcd.write_to_position(1, 7, _("OPEN"))
+        elif self.race_mode == "LAPS":
+            lcd.write_to_position(1, 7, _("LAPS"))
+            lcd.write_to_position(1, 11, str(self.race_laps))
+        elif self.race_mode == "TIME":
+            lcd.write_to_position(1, 7, _("TIME"))
+            lcd.write_to_position(1, 11, str(self.race_time_min))
+        else:
+            lcd.write_to_position(1, 7, _("???"))
+
+        # Set up tracks
+        self._instantiated_tracks = []
+        for track_name, tr_cfg in self.tracks.items():
+            enabled = tr_cfg.get("enabled", True)
+            handicap = tr_cfg.get("handicap", 0.0)
+            track = Track(name=track_name, 
+                            enabled=enabled, 
+                            handicap=handicap,
+                            start_control=self.start_control,
+                            trl=self.device_manager.get_traffic_light(track_name),
+                            sns=self.device_manager.get_sensor(track_name),
+                            lcd=self.device_manager.get_lcd(track_name)
+                            )
+            self._instantiated_tracks.append(track)
+            if enabled:
+                if self.start_control:
+                    track.status = "LINEUP"
+                else:
+                    track.status = "ACTIVE"
+
+        # Activate required input devices
+        self.device_manager.register_BTN_Reset_pressed_callback(self.reset_button_pressed)
+        self.device_manager.register_BTN_Restart_pressed_callback(self.restart_button_pressed)
+        if self.start_control == True:
+            self.device_manager.register_BTN_Start_pressed_callback(self.start_button_pressed)
+
+
+    def cleanup(self):
+        """Cleanup the race monitor and all tracks.
+        
+            Deactivate all input devices and clean up all output devices
+            Deactivate all tracks
+        """
+        logger.debug("Race_Monitor.cleanup Entry")
+
+        # Ignore any general input devices
+        self.device_manager.register_BTN_Reset_pressed_callback(self.ignore_button_pressed)
+        self.device_manager.register_BTN_Restart_pressed_callback(self.ignore_button_pressed)
+        self.device_manager.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
+        self.device_manager.register_Selector_Button_pressed_callback(self.ignore_button_pressed)
+        self.device_manager.register_Selector_rotated_clockwise_callback(self.ignore_button_pressed)
+        self.device_manager.register_Selector_rotated_counter_clockwise_callback(self.ignore_button_pressed)
+
+        # Clean up all tracks
         for track in self._instantiated_tracks:
             track.enabled = False
             track.status = "INACTIVE"
 
+        self._instantiated_tracks = []
+
+        # Stop speaker
+        spk = self.device_manager.speaker
+        spk.off()
+
+        # Clean up all LCDs
         lcd = self.device_manager.lcd_circuit
         lcd.clear()
         lcd.off()
+
+        # Only active buttons are reset and restart
+        self.device_manager.register_BTN_Reset_pressed_callback(self.reset_button_pressed)
+        self.device_manager.register_BTN_Restart_pressed_callback(self.restart_button_pressed)
+
+
+    def terminate(self):
+        """Terminate the race and reset all tracks."""
+        logger.debug("Race_Monitor.terminate Entry")
+
+        self.cleanup()
+
+        # Ignare reset button
+        self.device_manager.register_BTN_Reset_pressed_callback(self.ignore_button_pressed)
 
 class Track:
     def __init__(self, 
                  name: str, 
                  enabled: bool = True,
+                 handicap: float = 0.0,
                  start_control: bool = False,
                  trl: Traffic_Light_crm = None,
                  sns: Sensor_crm = None,
                  lcd: LCD_crm = None
                  ):
+        logger.debug("Track.__init__ Entry for track: %s", name)
         self._name = name
         self._enabled = enabled
+        self._handicap = handicap
         self._lcd = lcd
         self._trl = trl
         self._sns = sns
@@ -233,12 +649,25 @@ class Track:
         self._name = value
 
     @property
+    def id(self) -> str:
+        """Return the track ID, which is the last character of its name"""
+        return self._name[-1]
+
+    @property
     def enabled(self) -> bool:
         return self._enabled
 
     @enabled.setter
     def enabled(self, value: bool):
         self._enabled = value
+
+    @property
+    def handicap(self) -> float:
+        return self._handicap
+
+    @handicap.setter
+    def handicap(self, value: float):
+        self._handicap = value
 
     @property
     def lcd(self) -> LCD_crm:
@@ -330,6 +759,7 @@ class Track:
 
         This method handles the track status according to the track state chart
         """
+        logger.debug(f"Track.status setter Entry with value: {value}")
         match value:
             case "INACTIVE":
                 self._status = "INACTIVE"
@@ -387,39 +817,51 @@ class Track:
                 self.trl.turn_off()
 
     def ignore_car_detected(self):
+        logger.debug("Track.ignore_car_detected Entry")
         pass
 
     def ignore_car_cleared(self):
+        logger.debug("Track.ignore_car_cleared Entry")
         pass
 
     def LINEUP_handle_car_detected(self):
+        logger.debug("Track.LINEUP_handle_car_detected Entry")
         self.status = "READY"
 
     def LINEUP_handle_car_cleared(self):
+        logger.debug("Track.LINEUP_handle_car_cleared Entry")
         self.status = "LINEUP"
 
     def READY_handle_car_detected(self):
+        logger.debug("Track.READY_handle_car_detected Entry")
         pass
 
     def READY_handle_car_cleared(self):
+        logger.debug("Track.READY_handle_car_cleared Entry")
         self.status = "LINEUP"
 
     def START_RED_handle_car_detected(self):
+        logger.debug("Track.START_RED_handle_car_detected Entry")
         pass
 
     def START_RED_handle_car_cleared(self):
+        logger.debug("Track.START_RED_handle_car_cleared Entry")
         self.status = "FALSE_START"
 
     def START_YELLOW_handle_car_detected(self):
+        logger.debug("Track.START_YELLOW_handle_car_detected Entry")
         pass
 
     def START_YELLOW_handle_car_cleared(self):
+        logger.debug("Track.START_YELLOW_handle_car_cleared Entry")
         self.status = "FALSE_START"
 
     def START_GREEN_handle_car_detected(self):
+        logger.debug("Track.START_GREEN_handle_car_detected Entry")
         pass
 
     def START_GREEN_handle_car_cleared(self):
+        logger.debug("Track.START_GREEN_handle_car_cleared Entry")
         self.status = "ACTIVE"
 
     def ACTIVE_handle_car_detected(self):
@@ -427,6 +869,7 @@ class Track:
 
            Increment the lap count and determine the best lap
         """
+        logger.debug("Track.ACTIVE_handle_car_detected Entry")
         if self.lap_start is None:
             self.lap_start = time.time()
             self.start = time.time()
@@ -447,7 +890,20 @@ class Track:
             self.lcd.write_to_position(1,11,f"{self.best_lap_time:5.1f}")
 
     def ACTIVE_handle_car_cleared(self):
+        logger.debug("Track.ACTIVE_handle_car_cleared Entry")
         pass
+
+    def show_setup(self):
+        """Display the setup information on the track LCD"""
+        logger.debug("Track.show_setup Entry")
+
+        if self.enabled:
+            self.lcd.write_to_position(0, 0, _(self.name))
+            self.lcd.write_to_position(1, 0, _("HANDICAP:"))
+            self.lcd.write_to_position(1, 12, f"{self.handicap:4.1f}")
+        else:
+            self.lcd.clear()
+            self.lcd.off()
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Handle MQTT connect
