@@ -1,3 +1,4 @@
 crm_client.py
 crm_device_manager.py
 crm_server.py
+i18n.py

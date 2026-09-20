@@ -51,6 +51,7 @@ class Race_Monitor:
         self._current_setup_step = None
         self._save_config = False
         self._handicap = 0.0
+        self.languages = self.supported_languages
 
         self._modes = {
             "OPEN": _("OPEN"),
@@ -76,6 +77,8 @@ class Race_Monitor:
             self.race_mode = self.config["config"].get("race_mode", "OPEN")
             self.race_time = self.config["config"].get("race_time_min", 5)
             self.race_laps = self.config["config"].get("race_laps", 10)
+
+        self.lng_index = self.languages.index(self._lng) if self._lng in self.languages else 0
 
         # Check if tracks are instantiated
         if self._tracks is None or len(self._tracks) < 1:
@@ -104,6 +107,21 @@ class Race_Monitor:
         self._lng = value
         set_language(self._lng)
 
+    @property
+    def supported_languages(self) -> list:
+        """Return a list of supported languages
+
+        The list is determined from the list of direct subdirectories in the languages folder.
+
+        Returns:
+            list: supported languages
+        """
+        languages_dir = os.path.join(os.path.dirname(__file__), "locales")
+        lngs = [name for name in os.listdir(languages_dir) if os.path.isdir(os.path.join(languages_dir, name))]
+        if not "en" in lngs:
+            lngs.append("en")
+        return lngs
+    
     @property
     def tracks(self) -> dict:
         return self._tracks
@@ -322,6 +340,12 @@ class Race_Monitor:
             self.handicap -= 1.0
             for track in self._instantiated_tracks:
                 track.show_setup()
+        elif self.current_setup_step == "LANGUA":
+            lcd.write_to_position(1, 0, " " * 16)
+            self.lng_index = (self.lng_index - 1) % len(self.languages)
+            self.lng = self.languages[self.lng_index]
+            lcd.write_to_position(1, 0, self.lng)
+            set_language(self.lng)
 
     def selector_turned_right(self):
         logger.debug("Race_Monitor.selector_turned_right Entry")
@@ -383,6 +407,12 @@ class Race_Monitor:
             self.handicap += 1.0
             for track in self._instantiated_tracks:
                 track.show_setup()
+        elif self.current_setup_step == "LANGUA":
+            lcd.write_to_position(1, 0, " " * 16)
+            self.lng_index = (self.lng_index + 1) % len(self.languages)
+            self.lng = self.languages[self.lng_index]
+            lcd.write_to_position(1, 0, self.lng)
+            set_language(self.lng)
 
     def enter_setup_mode(self):
         """Enter the setup mode
@@ -394,7 +424,8 @@ class Race_Monitor:
         3. MODDAT : Set mode-specific data (time or # of laps)
         4. STARTC : Enable/disable start control
         5. HANDIC : Set track handicaps
-        6. SAVCFG : Save configuration
+        6. LANGUA : Set language
+        7. SAVCFG : Save configuration
         """
         logger.debug("Race_Monitor.enter_setup_mode Entry")
 
@@ -451,9 +482,15 @@ class Race_Monitor:
             lcd.write_to_position(0, 0, _("SELECT HANDICAP"))
             lcd.write_to_position(1, 0, _("See Tracks"))
             self.current_setup_step = "HANDIC"
-        elif self.current_setup_step == "HANDIC" \
+        elif (self.current_setup_step == "HANDIC" \
           or (self.current_setup_step == "STARTC" and self.start_control == False) \
-          or (self.current_setup_step == "STARTC" and self.enabled_tracks_count < 2)  :
+          or (self.current_setup_step == "STARTC" and self.enabled_tracks_count < 2) ) \
+         and len(self.supported_languages) > 1: 
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("SELECT LANGUAGE"))
+            lcd.write_to_position(1, 0, self.lng)
+            self.current_setup_step = "LANGUA"
+        elif self.current_setup_step == "LANGUA" :
             lcd.clear()
             lcd.write_to_position(0, 0, _("SAVE CONFIG"))
             if self._save_config:

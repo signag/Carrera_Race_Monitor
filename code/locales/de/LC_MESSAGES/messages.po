@@ -1,0 +1,118 @@
+# German translations for Carrera_Race_Monitor.
+# Copyright (C) 2026 signag
+# This file is distributed under the same license as the
+# Carrera_Race_Monitor project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Carrera_Race_Monitor 0.0.1\n"
+"Report-Msgid-Bugs-To: "
+"https://github.com/signag/Carrera_Race_Monitor/issues\n"
+"POT-Creation-Date: 2026-09-20 13:19+0200\n"
+"PO-Revision-Date: 2026-09-20 13:19+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: code/crm_server.py:57 code/crm_server.py:565
+msgid "OPEN"
+msgstr "OFFEN"
+
+#: code/crm_server.py:58 code/crm_server.py:567
+msgid "LAPS"
+msgstr "RNDN"
+
+#: code/crm_server.py:59
+msgid "TIME (min)"
+msgstr "ZEIT (min)"
+
+#: code/crm_server.py:334 code/crm_server.py:401 code/crm_server.py:476
+msgid "DISABLED"
+msgstr "INAKTIV"
+
+#: code/crm_server.py:337 code/crm_server.py:404 code/crm_server.py:474
+msgid "ENABLED"
+msgstr "AKTIV"
+
+#: code/crm_server.py:451 code/crm_server.py:503 code/crm_server.py:508
+msgid "SELECT TRACKS"
+msgstr "WÄHLE SPUREN"
+
+#: code/crm_server.py:455
+msgid "SELECT MODE"
+msgstr "WÄHLE MODUS"
+
+#: code/crm_server.py:465
+msgid "SELECT RACE TIME"
+msgstr "WÄHLE ZEIT"
+
+#: code/crm_server.py:467
+msgid "SELECT # LAPS"
+msgstr "WÄHLE # RNDN"
+
+#: code/crm_server.py:472
+msgid "START-CONTROL"
+msgstr "STARTKONTROLLE"
+
+#: code/crm_server.py:482
+msgid "SELECT HANDICAP"
+msgstr "WÄHLE RÜCKST."
+
+#: code/crm_server.py:483
+msgid "See Tracks"
+msgstr "Siehe Spur"
+
+#: code/crm_server.py:490
+msgid "SELECT LANGUAGE"
+msgstr "WÄHLE SPRACHE"
+
+#: code/crm_server.py:495
+msgid "SAVE CONFIG"
+msgstr "SPEICHERN"
+
+#: code/crm_server.py:497
+msgid "YES"
+msgstr "JA"
+
+#: code/crm_server.py:499
+msgid "NO"
+msgstr "NEIN"
+
+#: code/crm_server.py:541
+msgid "TRACK"
+msgstr "SPUR"
+
+#: code/crm_server.py:561
+msgid "  RACE MONITOR"
+msgstr ""
+
+#: code/crm_server.py:562
+msgid "RACE"
+msgstr "RENN"
+
+#: code/crm_server.py:570 code/crm_server.py:841
+msgid "TIME"
+msgstr "ZEIT"
+
+#: code/crm_server.py:573
+msgid "???"
+msgstr "???"
+
+#: code/crm_server.py:839
+msgid "LAP"
+msgstr "RUNDE"
+
+#: code/crm_server.py:843
+msgid "BEST"
+msgstr "BESTE"
+
+#: code/crm_server.py:939
+msgid "HANDICAP:"
+msgstr "RÜCKSTAND"
+
