@@ -12,7 +12,9 @@
             }
         },
         "start_control": false,
-        "race_mode": "OPEN"
+        "race_mode": "OPEN",
+        "race_laps": 10,
+        "race_time_min": 5
     },
     "devices": {
        "LCD_Track_1": {

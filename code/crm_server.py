@@ -3,17 +3,15 @@
 """
 import os
 from pathlib import Path
-import gettext
-import select
-from unittest import case
 import paho.mqtt.client as mqtt
-from collections import deque
 import json
 import signal
 import threading
 import sys
 import time
 from i18n import _, set_language
+from babel import Locale
+from babel.numbers import format_decimal
 from crm_device_manager import DeviceManager, Traffic_Light_crm, Sensor_crm, LCD_crm
 import logging
 
@@ -53,12 +51,6 @@ class Race_Monitor:
         self._handicap = 0.0
         self.languages = self.supported_languages
 
-        self._modes = {
-            "OPEN": _("OPEN"),
-            "LAPS": _("LAPS"),
-            "TIME": _("TIME (min)")
-        }
-
         # Get configuration
         self.config = self.get_config()
 
@@ -87,6 +79,15 @@ class Race_Monitor:
 
         # Initialize the devices
         self.device_manager = DeviceManager(self.config["devices"])
+
+        # Translate modes
+        self._modes = {
+            "OPEN": _("OPEN    "),
+            "LAPS": _("LAPS    "),
+            "TIME": _("TIME    ")
+        }
+        logger.debug("Race_Monitor.__init__ - lng=%s", self._lng)
+        logger.debug("Race_Monitor.__init__ - _modes=%s", self._modes)
 
         self.restart()
 
@@ -319,22 +320,24 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, " " * 16)
             lcd.write_to_position(1, 0, self._modes[self.race_mode])
             if self.race_mode == "TIME":
-                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
-                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
         elif self.current_setup_step == "MODDAT":
             if self.race_mode == "TIME":
                 self.race_time -= 1
-                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 self.race_laps -= 1
-                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
         elif self.current_setup_step == "STARTC":
             if self.start_control == True:
-                lcd.write_to_position(1, 0, _("DISABLED"))
+                lcd.write_to_position(1, 0, _("DISABLED        "))
                 self.start_control = False
             else:
-                lcd.write_to_position(1, 0, _("ENABLED"))
+                lcd.write_to_position(1, 0, _("ENABLED         "))
                 self.start_control = True
         elif self.current_setup_step == "HANDIC":
             self.handicap -= 1.0
@@ -344,7 +347,7 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, " " * 16)
             self.lng_index = (self.lng_index - 1) % len(self.languages)
             self.lng = self.languages[self.lng_index]
-            lcd.write_to_position(1, 0, self.lng)
+            lcd.write_to_position(1, 0, Locale(self.lng).get_display_name(self.lng))
             set_language(self.lng)
 
     def selector_turned_right(self):
@@ -386,22 +389,24 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, " " * 16)
             lcd.write_to_position(1, 0, self._modes[self.race_mode])
             if self.race_mode == "TIME":
-                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
-                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
         elif self.current_setup_step == "MODDAT":
             if self.race_mode == "TIME":
                 self.race_time += 1
-                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 self.race_laps += 1
-                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
         elif self.current_setup_step == "STARTC":
             if self.start_control == True:
-                lcd.write_to_position(1, 0, _("DISABLED"))
+                lcd.write_to_position(1, 0, _("DISABLED        "))
                 self.start_control = False
             else:
-                lcd.write_to_position(1, 0, _("ENABLED"))
+                lcd.write_to_position(1, 0, _("ENABLED         "))
                 self.start_control = True
         elif self.current_setup_step == "HANDIC":
             self.handicap += 1.0
@@ -411,7 +416,7 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, " " * 16)
             self.lng_index = (self.lng_index + 1) % len(self.languages)
             self.lng = self.languages[self.lng_index]
-            lcd.write_to_position(1, 0, self.lng)
+            lcd.write_to_position(1, 0, Locale(self.lng).get_display_name(self.lng))
             set_language(self.lng)
 
     def enter_setup_mode(self):
@@ -448,64 +453,65 @@ class Race_Monitor:
         if self.current_setup_step is None:
             self.current_setup_step = "TRACKS"
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SELECT TRACKS"))
+            lcd.write_to_position(0, 0, _("SELECT TRACKS   "))
             self.show_selected_tracks()
         elif self.current_setup_step == "TRACKS":
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SELECT MODE"))
+            lcd.write_to_position(0, 0, _("SELECT MODE     "))
             lcd.write_to_position(1, 0, self._modes[self.race_mode])
             if self.race_mode == "TIME":
-                lcd.write_to_position(1, 12, f"{self.race_time:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
-                lcd.write_to_position(1, 12, f"{self.race_laps:4d}")
+                lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
             self.current_setup_step = "RCMODE"
         elif self.current_setup_step == "RCMODE" \
          and self.race_mode in ["LAPS", "TIME"]:
             if self.race_mode == "TIME":
                 lcd.write_to_position(0, 0, _("SELECT RACE TIME"))
             elif self.race_mode == "LAPS":
-                lcd.write_to_position(0, 0, _("SELECT # LAPS"))
+                lcd.write_to_position(0, 0, _("SELECT # LAPS   "))
             self.current_setup_step = "MODDAT"
         elif self.current_setup_step == "MODDAT" \
           or (self.current_setup_step == "RCMODE" and self.race_mode == "OPEN"):
             lcd.clear()
-            lcd.write_to_position(0, 0, _("START-CONTROL"))
+            lcd.write_to_position(0, 0, _("START-CONTROL   "))
             if self.start_control == True:
-                lcd.write_to_position(1, 0, _("ENABLED"))
+                lcd.write_to_position(1, 0, _("ENABLED         "))
             else:
-                lcd.write_to_position(1, 0, _("DISABLED"))
+                lcd.write_to_position(1, 0, _("DISABLED        "))
             self.current_setup_step = "STARTC"
         elif self.current_setup_step == "STARTC" \
          and self.start_control == True \
          and self.enabled_tracks_count > 1:
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SELECT HANDICAP"))
-            lcd.write_to_position(1, 0, _("See Tracks"))
+            lcd.write_to_position(0, 0, _("SELECT HANDICAP "))
+            lcd.write_to_position(1, 0, _("See Tracks      "))
             self.current_setup_step = "HANDIC"
         elif (self.current_setup_step == "HANDIC" \
           or (self.current_setup_step == "STARTC" and self.start_control == False) \
           or (self.current_setup_step == "STARTC" and self.enabled_tracks_count < 2) ) \
          and len(self.supported_languages) > 1: 
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SELECT LANGUAGE"))
-            lcd.write_to_position(1, 0, self.lng)
+            lcd.write_to_position(0, 0, _("SELECT LANGUAGE "))
+            lcd.write_to_position(1, 0, Locale(self.lng).get_display_name(self.lng))
             self.current_setup_step = "LANGUA"
         elif self.current_setup_step == "LANGUA" :
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SAVE CONFIG"))
+            lcd.write_to_position(0, 0, _("SAVE CONFIG     "))
             if self._save_config:
-                lcd.write_to_position(1, 0, _("YES"))
+                lcd.write_to_position(1, 0, _("YES             "))
             else:
-                lcd.write_to_position(1, 0, _("NO"))
+                lcd.write_to_position(1, 0, _("NO              "))
             self.current_setup_step = "SAVCFG"
         elif self.current_setup_step == "SAVCFG":
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SELECT TRACKS"))
+            lcd.write_to_position(0, 0, _("SELECT TRACKS   "))
             self.show_selected_tracks()
             self.current_setup_step = "TRACKS"
         else:
             lcd.clear()
-            lcd.write_to_position(0, 0, _("SELECT TRACKS"))
+            lcd.write_to_position(0, 0, _("SELECT TRACKS   "))
             self.show_selected_tracks()
             self.current_setup_step = "TRACKS"
         logger.debug("Race_Monitor.next_setup_step: Exit - New step: %s", self.current_setup_step)
@@ -528,7 +534,8 @@ class Race_Monitor:
                                 start_control=self.start_control,
                                 trl=self.device_manager.get_traffic_light(track_name),
                                 sns=self.device_manager.get_sensor(track_name),
-                                lcd=self.device_manager.get_lcd(track_name)
+                                lcd=self.device_manager.get_lcd(track_name),
+                                lng=self.lng
                                 )
                 self._instantiated_tracks.append(track)
 
@@ -558,17 +565,16 @@ class Race_Monitor:
 
         # Show race information on the LCD
         lcd = self.device_manager.lcd_circuit
-        lcd.write_to_position(0, 0, _("  RACE MONITOR"))
-        lcd.write_to_position(1, 0, _("RACE"))
-        lcd.write_to_position(1, 4, ":")
+        lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
+        lcd.write_to_position(1, 0, _("RACE:  "))
         if self.race_mode == "OPEN":
-            lcd.write_to_position(1, 7, _("OPEN"))
+            lcd.write_to_position(1, 7, _("OPEN     "))
         elif self.race_mode == "LAPS":
-            lcd.write_to_position(1, 7, _("LAPS"))
-            lcd.write_to_position(1, 11, str(self.race_laps))
+            lcd.write_to_position(1, 7, f"{self.race_laps:3d}")
+            lcd.write_to_position(1, 11, _("LAPS "))
         elif self.race_mode == "TIME":
-            lcd.write_to_position(1, 7, _("TIME"))
-            lcd.write_to_position(1, 11, str(self.race_time_min))
+            lcd.write_to_position(1, 7, f"{self.race_time:3d}")
+            lcd.write_to_position(1, 11, _("min "))
         else:
             lcd.write_to_position(1, 7, _("???"))
 
@@ -583,7 +589,8 @@ class Race_Monitor:
                             start_control=self.start_control,
                             trl=self.device_manager.get_traffic_light(track_name),
                             sns=self.device_manager.get_sensor(track_name),
-                            lcd=self.device_manager.get_lcd(track_name)
+                            lcd=self.device_manager.get_lcd(track_name),
+                            lng=self.lng
                             )
             self._instantiated_tracks.append(track)
             if enabled:
@@ -653,7 +660,8 @@ class Track:
                  start_control: bool = False,
                  trl: Traffic_Light_crm = None,
                  sns: Sensor_crm = None,
-                 lcd: LCD_crm = None
+                 lcd: LCD_crm = None,
+                 lng: str = "en"
                  ):
         logger.debug("Track.__init__ Entry for track: %s", name)
         self._name = name
@@ -671,6 +679,7 @@ class Track:
         self._current_lap_time = 0.0
         self._start_control = start_control
         self._status = "UNKNOWN"
+        self._lng = lng
 
         if self.enabled == False:
             self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
@@ -689,6 +698,14 @@ class Track:
     def id(self) -> str:
         """Return the track ID, which is the last character of its name"""
         return self._name[-1]
+
+    @property
+    def lng(self) -> str:
+        return self._lng
+
+    @lng.setter
+    def lng(self, value: str):
+        self._lng = value
 
     @property
     def enabled(self) -> bool:
@@ -836,12 +853,8 @@ class Track:
                 self.sns.register_Car_detected_callback(self.ACTIVE_handle_car_detected)
                 self.trl.set_green()
                 self.lcd.clear()
-                self.lcd.write_to_position(0,0,_("LAP"))
-                self.lcd.write_to_position(0,4,":")
-                self.lcd.write_to_position(0,8,_("TIME"))
-                self.lcd.write_to_position(0,12,":")
-                self.lcd.write_to_position(1,0,_("BEST"))
-                self.lcd.write_to_position(1,4,":")
+                self.lcd.write_to_position(0,0,_("LAP :"))
+                self.lcd.write_to_position(1,0,_("BEST:"))
             case "FALSE_START":
                 self._status = "FALSE_START"
                 self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
@@ -913,6 +926,7 @@ class Track:
             self.laps = 0
             self.total_time = 0.0
             self.current_lap_time = 0.0
+            self.lcd.write_to_position(0,5,f"{self.laps:2d}")
         else:
             self.laps += 1
             self.current_lap_time = time.time() - self.lap_start
@@ -923,8 +937,10 @@ class Track:
             self.lap_start = time.time()
             self.lcd.write_to_position(0,5,f"{self.laps:2d}")
             self.lcd.write_to_position(1,5,f"{self.best_lap:2d}")
-            self.lcd.write_to_position(0,13,f"{int(self.total_time):3d}")
-            self.lcd.write_to_position(1,11,f"{self.best_lap_time:5.1f}")
+            self.lcd.write_to_position(0,8,f"{format_decimal(self.current_lap_time, format='0.0', locale=self.lng):>5}")
+            self.lcd.write_to_position(0,14,_("sc"))
+            self.lcd.write_to_position(1,8,f"{format_decimal(self.best_lap_time, format='0.0', locale=self.lng):>5}")
+            self.lcd.write_to_position(1,14,_("sc"))
 
     def ACTIVE_handle_car_cleared(self):
         logger.debug("Track.ACTIVE_handle_car_cleared Entry")
@@ -935,9 +951,10 @@ class Track:
         logger.debug("Track.show_setup Entry")
 
         if self.enabled:
-            self.lcd.write_to_position(0, 0, _(self.name))
-            self.lcd.write_to_position(1, 0, _("HANDICAP:"))
-            self.lcd.write_to_position(1, 12, f"{self.handicap:4.1f}")
+            self.lcd.write_to_position(0, 0, _("TRACK"))
+            self.lcd.write_to_position(0, 6, self.id)
+            self.lcd.write_to_position(1, 0, _("HANDICAP :"))
+            self.lcd.write_to_position(1, 11, f"{int(self.handicap):2d}")
         else:
             self.lcd.clear()
             self.lcd.off()

@@ -105,7 +105,7 @@ class Speaker_crm():
 class LCD_crm():
     def __init__(self, params: dict):
         self.i2c_address = params.get("I2C_address")
-        self.lcd = CharLCD('PCF8574',int(self.i2c_address, 16), cols=16, rows=2, dotsize=8)
+        self.lcd = CharLCD('PCF8574',int(self.i2c_address, 16), cols=16, rows=2, dotsize=8, charmap='A02')
         self.lcd.backlight_enabled = False
 
     def display_message(self, message: str):

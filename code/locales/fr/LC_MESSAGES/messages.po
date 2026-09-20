@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Carrera_Race_Monitor 0.0.1\n"
 "Report-Msgid-Bugs-To: "
 "https://github.com/signag/Carrera_Race_Monitor/issues\n"
-"POT-Creation-Date: 2026-09-20 13:19+0200\n"
+"POT-Creation-Date: 2026-09-20 17:32+0200\n"
 "PO-Revision-Date: 2026-09-20 13:29+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -20,99 +20,179 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: code/crm_server.py:57 code/crm_server.py:565
-msgid "OPEN"
+#: code/crm_server.py:55
+msgid "OPEN    "
 msgstr ""
 
-#: code/crm_server.py:58 code/crm_server.py:567
-msgid "LAPS"
+#: code/crm_server.py:56
+msgid "LAPS    "
 msgstr ""
 
-#: code/crm_server.py:59
-msgid "TIME (min)"
+#: code/crm_server.py:57
+msgid "TIME    "
 msgstr ""
 
-#: code/crm_server.py:334 code/crm_server.py:401 code/crm_server.py:476
-msgid "DISABLED"
+#: code/crm_server.py:321 code/crm_server.py:328 code/crm_server.py:390
+#: code/crm_server.py:397 code/crm_server.py:461
+msgid "min"
 msgstr ""
 
-#: code/crm_server.py:337 code/crm_server.py:404 code/crm_server.py:474
-msgid "ENABLED"
+#: code/crm_server.py:334 code/crm_server.py:403 code/crm_server.py:479
+msgid "DISABLED        "
 msgstr ""
 
-#: code/crm_server.py:451 code/crm_server.py:503 code/crm_server.py:508
-msgid "SELECT TRACKS"
+#: code/crm_server.py:337 code/crm_server.py:406 code/crm_server.py:477
+msgid "ENABLED         "
 msgstr ""
 
-#: code/crm_server.py:455
-msgid "SELECT MODE"
+#: code/crm_server.py:453 code/crm_server.py:506 code/crm_server.py:511
+msgid "SELECT TRACKS   "
 msgstr ""
 
-#: code/crm_server.py:465
+#: code/crm_server.py:457
+msgid "SELECT MODE     "
+msgstr ""
+
+#: code/crm_server.py:468
 msgid "SELECT RACE TIME"
 msgstr ""
 
-#: code/crm_server.py:467
-msgid "SELECT # LAPS"
+#: code/crm_server.py:470
+msgid "SELECT # LAPS   "
 msgstr ""
 
-#: code/crm_server.py:472
-msgid "START-CONTROL"
+#: code/crm_server.py:475
+msgid "START-CONTROL   "
 msgstr ""
 
-#: code/crm_server.py:482
-msgid "SELECT HANDICAP"
+#: code/crm_server.py:485
+msgid "SELECT HANDICAP "
 msgstr ""
 
-#: code/crm_server.py:483
-msgid "See Tracks"
+#: code/crm_server.py:486
+msgid "See Tracks      "
 msgstr ""
 
-#: code/crm_server.py:490
-msgid "SELECT LANGUAGE"
+#: code/crm_server.py:493
+msgid "SELECT LANGUAGE "
 msgstr ""
 
-#: code/crm_server.py:495
-msgid "SAVE CONFIG"
+#: code/crm_server.py:498
+msgid "SAVE CONFIG     "
 msgstr ""
 
-#: code/crm_server.py:497
-msgid "YES"
+#: code/crm_server.py:500
+msgid "YES             "
 msgstr ""
 
-#: code/crm_server.py:499
-msgid "NO"
+#: code/crm_server.py:502
+msgid "NO              "
 msgstr ""
 
-#: code/crm_server.py:541
+#: code/crm_server.py:545 code/crm_server.py:951
 msgid "TRACK"
 msgstr ""
 
-#: code/crm_server.py:561
-msgid "  RACE MONITOR"
+#: code/crm_server.py:565
+msgid "KEEP DRIVING    "
 msgstr ""
 
-#: code/crm_server.py:562
-msgid "RACE"
+#: code/crm_server.py:566
+msgid "RACE:  "
 msgstr ""
 
-#: code/crm_server.py:570 code/crm_server.py:841
-msgid "TIME"
+#: code/crm_server.py:568
+msgid "OPEN     "
 msgstr ""
 
-#: code/crm_server.py:573
+#: code/crm_server.py:571
+msgid "LAPS "
+msgstr ""
+
+#: code/crm_server.py:574
+msgid "min "
+msgstr ""
+
+#: code/crm_server.py:576
 msgid "???"
 msgstr ""
 
-#: code/crm_server.py:839
-msgid "LAP"
+#: code/crm_server.py:853
+msgid "LAP :"
 msgstr ""
 
-#: code/crm_server.py:843
-msgid "BEST"
+#: code/crm_server.py:854
+msgid "BEST:"
 msgstr ""
 
-#: code/crm_server.py:939
-msgid "HANDICAP:"
+#: code/crm_server.py:938 code/crm_server.py:940
+msgid "sc"
 msgstr ""
+
+#: code/crm_server.py:953
+msgid "HANDICAP :"
+msgstr ""
+
+#~ msgid "OPEN"
+#~ msgstr ""
+
+#~ msgid "LAPS"
+#~ msgstr ""
+
+#~ msgid "TIME (min)"
+#~ msgstr ""
+
+#~ msgid "DISABLED"
+#~ msgstr ""
+
+#~ msgid "ENABLED"
+#~ msgstr ""
+
+#~ msgid "SELECT TRACKS"
+#~ msgstr ""
+
+#~ msgid "SELECT MODE"
+#~ msgstr ""
+
+#~ msgid "SELECT # LAPS"
+#~ msgstr ""
+
+#~ msgid "START-CONTROL"
+#~ msgstr ""
+
+#~ msgid "SELECT HANDICAP"
+#~ msgstr ""
+
+#~ msgid "See Tracks"
+#~ msgstr ""
+
+#~ msgid "SELECT LANGUAGE"
+#~ msgstr ""
+
+#~ msgid "SAVE CONFIG"
+#~ msgstr ""
+
+#~ msgid "YES"
+#~ msgstr ""
+
+#~ msgid "NO"
+#~ msgstr ""
+
+#~ msgid "  RACE MONITOR"
+#~ msgstr ""
+
+#~ msgid "RACE"
+#~ msgstr ""
+
+#~ msgid "TIME"
+#~ msgstr ""
+
+#~ msgid "LAP"
+#~ msgstr ""
+
+#~ msgid "BEST"
+#~ msgstr ""
+
+#~ msgid "HANDICAP:"
+#~ msgstr ""
 
