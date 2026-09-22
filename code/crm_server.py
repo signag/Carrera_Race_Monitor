@@ -13,7 +13,7 @@ import datetime
 from i18n import _, set_language
 from babel import Locale
 from babel.numbers import format_decimal
-from crm_device_manager import DeviceManager, Traffic_Light_crm, Sensor_crm, LCD_crm
+from crm_device_manager import DeviceManager, Traffic_Light_crm, Sensor_crm, LCD_crm, Speaker_crm
 import logging
 
 HOMEDIR = os.getcwd()
@@ -46,6 +46,7 @@ class Race_Monitor:
         self._race_mode = "OPEN"
         self._race_time_min = 5
         self._race_laps = 10
+        self._play_sound = True
         self._last_reset_press_time = None
         self._current_setup_step = None
         self._save_config = False
@@ -70,6 +71,7 @@ class Race_Monitor:
             self.race_mode = self.config["config"].get("race_mode", "OPEN")
             self.race_time = self.config["config"].get("race_time_min", 5)
             self.race_laps = self.config["config"].get("race_laps", 10)
+            self.play_sound = self.config["config"].get("play_sound", True)
 
         self.lng_index = self.languages.index(self._lng) if self._lng in self.languages else 0
 
@@ -198,6 +200,14 @@ class Race_Monitor:
     @race_laps.setter
     def race_laps(self, value: int):
         self._race_laps = value
+
+    @property
+    def play_sound(self) -> bool:
+        return self._play_sound
+
+    @play_sound.setter
+    def play_sound(self, value: bool):
+        self._play_sound = value
 
     @property
     def last_reset_press_time(self) -> float:
@@ -585,11 +595,17 @@ class Race_Monitor:
                 else:
                     track.status = "ACTIVE"
 
-        # Show race information on the LCD
+        # Show race information on the common LCD
         lcd = self.device_manager.lcd_circuit
         if self.race_mode == "OPEN":
             lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
         else:
+            spk = self.device_manager.speaker
+            race = Race(self.race_mode,self.race_laps, self.race_time_min, lcd, play_sound=self.play_sound, speaker=spk)
+            for track in self._instantiated_tracks:
+                if track.enabled:
+                    track.race = race
+                    race.tracks.append(track)
             if self.start_control == True:
                 if self.lineup_ok() == False:
                     lcd.write_to_position(0, 0, "LINEUP CARS     ")
@@ -699,6 +715,7 @@ class Track:
         self._start_control = start_control
         self._status = "UNKNOWN"
         self._lng = lng
+        self._race = None
 
         if self.enabled == False:
             self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
@@ -741,6 +758,14 @@ class Track:
     @handicap.setter
     def handicap(self, value: float):
         self._handicap = value
+
+    @property
+    def race(self) -> "Race":
+        return self._race
+
+    @race.setter
+    def race(self, value: "Race"):
+        self._race = value
 
     @property
     def lcd(self) -> LCD_crm:
@@ -897,13 +922,9 @@ class Track:
                 self.trl.turn_off()
 
     def is_lined_up(self):
-        logger.debug("Track.is_lined_up Entry - Track %s", self.name)
         if self.sns.is_occupied() == True:
-            logger.debug("Track.is_lined_up - Track %s is occupied", self.name)
             self.status = "LINEUP"
             return True
-        else:
-            logger.debug("Track.is_lined_up - Track %s is not occupied", self.name)
         return False
 
     def ignore_car_detected(self):
@@ -967,6 +988,8 @@ class Track:
             self.total_time = 0.0
             self.current_lap_time = 0.0
             self.lcd.write_to_position(0,5,f"{self.laps:2d}")
+            if self.race:
+                self.race.start()
         else:
             self.laps += 1
             self.current_lap_time = time.time() - self.lap_start
@@ -981,6 +1004,8 @@ class Track:
             self.lcd.write_to_position(0,14,_("sc"))
             self.lcd.write_to_position(1,8,f"{format_decimal(self.best_lap_time, format='0.0', locale=self.lng):>5}")
             self.lcd.write_to_position(1,14,_("sc"))
+            if self.race and self.status == "ACTIVE":
+                self.race.set_laps(self)
 
     def ACTIVE_handle_car_cleared(self):
         logger.debug("Track.ACTIVE_handle_car_cleared Entry")
@@ -999,19 +1024,62 @@ class Track:
             self.lcd.clear()
             self.lcd.off()
 
+    def finish(self):
+        """Handle the end of the race"""
+        logger.debug("Track.finish Entry")
+        self.status = "RACE_END"
+
 class Race:
     """This class implements a race
     """
-    def __init__(self):
+    def __init__(self, 
+                 race_mode: str, 
+                 race_laps: int, 
+                 race_time_min: int, 
+                 lcd: LCD_crm, 
+                 play_sound: bool,
+                 speaker: Speaker_crm):
         self._state = "IDLE"
         self._tracks = []
-        self._race_mode = "OPEN"
-        self._race_laps = 0
-        self._race_time_min = 0
+        self._race_mode = race_mode
+        self._race_laps = race_laps
+        self._race_time_min = race_time_min
         self._start_time = None
         self._end_time = None
         self._duration = 0.0
+        self._laps = 0
+        self._duration = 0.0
         self._winner = None
+        self._mode = race_mode
+        self._lcd = lcd
+        self._play_sound = play_sound
+        self._speaker = speaker
+
+        logger.debug("Race.__init__ - Race mode: %s", self._race_mode)
+        logger.debug("Race.__init__ - Race laps: %s", self._race_laps)
+        logger.debug("Race.__init__ - Race time_min: %s", self._race_time_min)
+    @property
+    def lcd(self) -> LCD_crm:
+        return self._lcd
+
+    @lcd.setter
+    def lcd(self, value: LCD_crm):
+        self._lcd = value
+
+    @property
+    def play_sound(self) -> bool:
+        return self._play_sound
+
+    @play_sound.setter
+    def play_sound(self, value: bool):
+        self._play_sound = value
+    @property
+    def speaker(self) -> Speaker_crm:
+        return self._speaker
+
+    @speaker.setter
+    def speaker(self, value: Speaker_crm):
+        self._speaker = value
 
     @property
     def state(self) -> str:
@@ -1070,6 +1138,14 @@ class Race:
         self._end_time = value
 
     @property
+    def laps(self) -> int:
+        return self._laps
+
+    @laps.setter
+    def laps(self, value: int):
+        self._laps = value
+
+    @property
     def duration(self) -> datetime.timedelta:
         return self._duration
 
@@ -1078,21 +1154,93 @@ class Race:
         self._duration = value
 
     @property
-    def winner(self) -> "Track":
+    def winner(self) -> Track:
         return self._winner
 
     @winner.setter
-    def winner(self, value: "Track"):
+    def winner(self, value: Track):
         self._winner = value
 
     def start(self):
         """Start a race
+
+        A race is started when
+        - (start_control = True): The start procedure is finished for the first car
+        - (start_control = False): The first car has been detected for the first time
         """
-        self.state = "running"
+        logger.debug("Race.start - Entry")
+        self.state = "ACTIVE"
         self.start_time = datetime.datetime.now()
         self.end_time = None
         self.duration = datetime.timedelta(0)
+        self.laps = 0
+        logger.debug("Race.start - Race state set to ACTIVE")
+        logger.debug("Race.start - Race start time set to: %s", self.start_time)
+        self.lcd.clear()
+        if self.race_mode == "LAPS":
+            self.lcd.write_to_position(0, 0, "TO GO: ")
+            self.lcd.write_to_position(0,7,f"{self.race_laps:3d}")
+            self.lcd.write_to_position(0, 11, "LAPS ")
+            self.lcd.write_to_position(1, 0, "TARGET:")
+            self.lcd.write_to_position(1,7,f"{self.race_laps:3d}")
+            self.lcd.write_to_position(1, 11, "LAPS ")
+        elif self.race_mode == "TIME":
+            self.lcd.write_to_position(0, 0, "TO GO: ")
+            self.lcd.write_to_position(0,7,f"{self.race_time_min:3d}")
+            self.lcd.write_to_position(0, 11, "min ")
+            self.lcd.write_to_position(1, 0, "TARGET:")
+            self.lcd.write_to_position(1,7,f"{self.race_time_min:3d}")
+            self.lcd.write_to_position(1, 11, "min ")
 
+    def set_laps(self, track: "Track"):
+        """Set the completed laps for the race
+
+        This is set whenever a lap has been completed for one of the tracks
+        If the number of laps for this track exceeds the number of tracks for the race,
+        this will be updated.
+        Otherwise it remains unchanged
+
+        Args:
+            track (Track): The track for which to set the completed laps.
+        """
+        logger.debug("Race.set_laps - Entry for track: %s with laps: %s", track.name, track.laps)
+        logger.debug("Race.set_laps - Current laps: %s", self.laps)
+        if track.laps > self.laps:
+            self.laps = track.laps
+            logger.debug("Race.set_laps - Updated laps to: %s", self.laps)
+            laps_to_go = self.race_laps - self.laps
+            logger.debug("Race.set_laps - Laps to go: %s", laps_to_go)
+            self.lcd.write_to_position(0,7,f"{laps_to_go:3d}")
+            logger.debug("Race.set_laps - Updated LCD with laps to go: %s", laps_to_go)
+
+        if self.race_mode == "LAPS":
+            if self.laps >= self.race_laps:
+                self.finish_race()
+
+    def finish_race(self):
+        """Finish a race
+        """
+        logger.debug("Race.finish_race - Entry for race with state: %s", self.state)
+        self.state = "RACE_END"
+        self.lcd.clear()
+        self.lcd.write_to_position(0, 0, "RACE FINISHED   ")
+        self.lcd.write_to_position(1, 0, "WINNER:         ")
+        self.winner = self.tracks[0]
+        for track in self.tracks:
+            track.status = "RACE_END"
+            if track.laps > self.winner.laps:
+                self.winner = track
+        self.lcd.write_to_position(1, 8, "TRACK ")
+        self.lcd.write_to_position(1, 15, f"{self.winner.id}")
+        if self.play_sound:
+            self.speaker.play_fanfare()
+#
+# ======================================================================================
+# 
+# Message Handling        
+#
+# ======================================================================================
+#
 def on_connect(client, userdata, flags, reason_code, properties):
     """Handle MQTT connect
 
