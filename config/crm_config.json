@@ -12,9 +12,9 @@
             }
         },
         "start_control": false,
-        "race_mode": "LAPS",
+        "race_mode": "TIME",
         "race_laps": 10,
-        "race_time_min": 5,
+        "race_time_min": 1,
         "play_sound": true
     },
     "devices": {

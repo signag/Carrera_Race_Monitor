@@ -7,6 +7,7 @@ import paho.mqtt.client as mqtt
 import json
 import signal
 import threading
+from _thread import allocate_lock
 import sys
 import time
 import datetime
@@ -52,6 +53,7 @@ class Race_Monitor:
         self._save_config = False
         self._handicap = 0.0
         self.languages = self.supported_languages
+        self.race = None
 
         # Get configuration
         self.config = self.get_config()
@@ -69,7 +71,7 @@ class Race_Monitor:
                                                      }})
             self.start_control = self.config["config"].get("start_control", False)
             self.race_mode = self.config["config"].get("race_mode", "OPEN")
-            self.race_time = self.config["config"].get("race_time_min", 5)
+            self.race_time_min = self.config["config"].get("race_time_min", 5)
             self.race_laps = self.config["config"].get("race_laps", 10)
             self.play_sound = self.config["config"].get("play_sound", True)
 
@@ -331,14 +333,14 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, " " * 16)
             lcd.write_to_position(1, 0, self._modes[self.race_mode])
             if self.race_mode == "TIME":
-                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 9, f"{self.race_time_min:3d}")
                 lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
         elif self.current_setup_step == "MODDAT":
             if self.race_mode == "TIME":
-                self.race_time -= 1
-                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                self.race_time_min -= 1
+                lcd.write_to_position(1, 9, f"{self.race_time_min:3d}")
                 lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 self.race_laps -= 1
@@ -400,14 +402,14 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, " " * 16)
             lcd.write_to_position(1, 0, self._modes[self.race_mode])
             if self.race_mode == "TIME":
-                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 9, f"{self.race_time_min:3d}")
                 lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
         elif self.current_setup_step == "MODDAT":
             if self.race_mode == "TIME":
-                self.race_time += 1
-                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                self.race_time_min += 1
+                lcd.write_to_position(1, 9, f"{self.race_time_min:3d}")
                 lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 self.race_laps += 1
@@ -471,7 +473,7 @@ class Race_Monitor:
             lcd.write_to_position(0, 0, _("SELECT MODE     "))
             lcd.write_to_position(1, 0, self._modes[self.race_mode])
             if self.race_mode == "TIME":
-                lcd.write_to_position(1, 9, f"{self.race_time:3d}")
+                lcd.write_to_position(1, 9, f"{self.race_time_min:3d}")
                 lcd.write_to_position(1, 13, _("min"))
             elif self.race_mode == "LAPS":
                 lcd.write_to_position(1, 9, f"{self.race_laps:3d}")
@@ -601,11 +603,11 @@ class Race_Monitor:
             lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
         else:
             spk = self.device_manager.speaker
-            race = Race(self.race_mode,self.race_laps, self.race_time_min, lcd, play_sound=self.play_sound, speaker=spk)
+            self.race = Race(self.race_mode,self.race_laps, self.race_time_min, lcd, play_sound=self.play_sound, speaker=spk)
             for track in self._instantiated_tracks:
                 if track.enabled:
-                    track.race = race
-                    race.tracks.append(track)
+                    track.race = self.race
+                    self.race.tracks.append(track)
             if self.start_control == True:
                 if self.lineup_ok() == False:
                     lcd.write_to_position(0, 0, "LINEUP CARS     ")
@@ -620,7 +622,7 @@ class Race_Monitor:
             lcd.write_to_position(1, 7, f"{self.race_laps:3d}")
             lcd.write_to_position(1, 11, _("LAPS "))
         elif self.race_mode == "TIME":
-            lcd.write_to_position(1, 7, f"{self.race_time:3d}")
+            lcd.write_to_position(1, 7, f"{self.race_time_min:3d}")
             lcd.write_to_position(1, 11, _("min "))
         else:
             lcd.write_to_position(1, 7, _("???"))
@@ -657,6 +659,10 @@ class Race_Monitor:
         self.device_manager.register_Selector_rotated_clockwise_callback(self.ignore_button_pressed)
         self.device_manager.register_Selector_rotated_counter_clockwise_callback(self.ignore_button_pressed)
 
+        # Cleanup race
+        if self.race:
+            self.race.abort_race()
+
         # Clean up all tracks
         for track in self._instantiated_tracks:
             track.enabled = False
@@ -676,6 +682,7 @@ class Race_Monitor:
         # Only active buttons are reset and restart
         self.device_manager.register_BTN_Reset_pressed_callback(self.reset_button_pressed)
         self.device_manager.register_BTN_Restart_pressed_callback(self.restart_button_pressed)
+        logger.debug("Race_Monitor.cleanup Exit")
 
 
     def terminate(self):
@@ -683,9 +690,12 @@ class Race_Monitor:
         logger.debug("Race_Monitor.terminate Entry")
 
         self.cleanup()
+        logger.debug("Race_Monitor.terminate - Cleanup completed")
 
-        # Ignare reset button
+        # Ignore reset and restart buttons
         self.device_manager.register_BTN_Reset_pressed_callback(self.ignore_button_pressed)
+        self.device_manager.register_BTN_Restart_pressed_callback(self.ignore_button_pressed)
+        logger.debug("Race_Monitor.terminate Exit")
 
 class Track:
     def __init__(self, 
@@ -915,8 +925,8 @@ class Track:
                 self.trl.alarm()
                 self.lcd.clear()
                 self.lcd.write_to_position(0,0,_("FALSE START     "))
-            case "RACE_END":
-                self._status = "RACE_END"
+            case "ENDED":
+                self._status = "ENDED"
                 self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
                 self.sns.register_Car_detected_callback(self.ignore_car_detected)
                 self.trl.turn_off()
@@ -1027,7 +1037,7 @@ class Track:
     def finish(self):
         """Handle the end of the race"""
         logger.debug("Track.finish Entry")
-        self.status = "RACE_END"
+        self.status = "ENDED"
 
 class Race:
     """This class implements a race
@@ -1054,6 +1064,8 @@ class Race:
         self._lcd = lcd
         self._play_sound = play_sound
         self._speaker = speaker
+        self.lock = allocate_lock()
+        self._thread = None
 
         logger.debug("Race.__init__ - Race mode: %s", self._race_mode)
         logger.debug("Race.__init__ - Race laps: %s", self._race_laps)
@@ -1087,7 +1099,8 @@ class Race:
 
     @state.setter
     def state(self, value: str):
-        self._state = value
+        with self.lock:
+            self._state = value
 
     @property
     def tracks(self) -> list["Track"]:
@@ -1146,12 +1159,12 @@ class Race:
         self._laps = value
 
     @property
-    def duration(self) -> datetime.timedelta:
-        return self._duration
+    def duration_sec(self) -> float:
+        return self._duration_sec
 
-    @duration.setter
-    def duration(self, value: datetime.timedelta):
-        self._duration = value
+    @duration_sec.setter
+    def duration_sec(self, value: float):
+        self._duration_sec = value
 
     @property
     def winner(self) -> Track:
@@ -1169,10 +1182,14 @@ class Race:
         - (start_control = False): The first car has been detected for the first time
         """
         logger.debug("Race.start - Entry")
+        if self.state == "ACTIVE" \
+        or self.state == "ENDED" \
+        or self.state == "ABORTED":
+            return
         self.state = "ACTIVE"
         self.start_time = datetime.datetime.now()
         self.end_time = None
-        self.duration = datetime.timedelta(0)
+        self.duration_sec = 0.0
         self.laps = 0
         logger.debug("Race.start - Race state set to ACTIVE")
         logger.debug("Race.start - Race start time set to: %s", self.start_time)
@@ -1191,6 +1208,9 @@ class Race:
             self.lcd.write_to_position(1, 0, "TARGET:")
             self.lcd.write_to_position(1,7,f"{self.race_time_min:3d}")
             self.lcd.write_to_position(1, 11, "min ")
+            self._thread = threading.Thread(target=self.race_timer)
+            self._thread.start()
+            logger.debug("Race.start - Race timer started")
 
     def set_laps(self, track: "Track"):
         """Set the completed laps for the race
@@ -1217,23 +1237,75 @@ class Race:
             if self.laps >= self.race_laps:
                 self.finish_race()
 
+    def race_timer(self):
+        """Handle the race timer for TIME mode"""
+
+        while self.duration_sec < self.race_time_min * 60:
+            self.duration_sec = (datetime.datetime.now() - self.start_time).total_seconds()
+            logger.debug("Race.race_timer - Elapsed time: %s seconds", self.duration_sec)
+            time_to_go = max(0, self.race_time_min * 60 - self.duration_sec)
+            logger.debug("Race.race_timer - Time to go: %s seconds", time_to_go)
+            if time_to_go >= 60.0:
+                time_to_go = int(round(time_to_go / 60))  # Convert to whole minutes
+                self.lcd.write_to_position(0,7,f"{time_to_go:3d}")
+                self.lcd.write_to_position(0,11,_("min  "))
+            else:
+                time_to_go = int(round(time_to_go))
+                self.lcd.write_to_position(0,7,f"{time_to_go:3d}")
+                self.lcd.write_to_position(0,11,_("sec  "))
+            with self.lock:
+                if self.state != "ACTIVE":
+                    break
+            time.sleep(1)
+
+        with self.lock:
+            race_active = self.state == "ACTIVE"
+        if race_active:
+            self.finish_race()
+        #self._thread = None
+
     def finish_race(self):
         """Finish a race
         """
         logger.debug("Race.finish_race - Entry for race with state: %s", self.state)
-        self.state = "RACE_END"
+        self.state = "ENDED"
+        logger.debug("Race.finish_race - Set state to ENDED")
+        # Wait for thread to finish
+        logger.debug("Race.finish_race - Waiting for thread to finish: %s", self._thread)
+        if self._thread is not None and threading.current_thread() is not self._thread:
+            self._thread.join()
+        self._thread = None
+        logger.debug("Race.finish_race - Race thread finished and cleared")
         self.lcd.clear()
         self.lcd.write_to_position(0, 0, "RACE FINISHED   ")
         self.lcd.write_to_position(1, 0, "WINNER:         ")
         self.winner = self.tracks[0]
         for track in self.tracks:
-            track.status = "RACE_END"
             if track.laps > self.winner.laps:
                 self.winner = track
+            track.finish()
         self.lcd.write_to_position(1, 8, "TRACK ")
         self.lcd.write_to_position(1, 15, f"{self.winner.id}")
         if self.play_sound:
             self.speaker.play_fanfare()
+        logger.debug("Race.finish_race - Exit")
+
+    def abort_race(self):
+        """Abort the current race"""
+        logger.debug("Race.abort_race - Entry for race with state: %s", self.state)
+        self.state = "ABORTED"
+        logger.debug("Race.abort_race - Set state to ABORTED")
+        #wait for thread to finish
+        logger.debug("Race.abort_race - Waiting for thread to finish: %s", self._thread)
+        if self._thread is not None and threading.current_thread() is not self._thread:
+            self._thread.join()
+        self._thread = None
+        logger.debug("Race.abort_race - Race thread finished and cleared")
+        self.lcd.clear()
+        self.lcd.write_to_position(0, 0, "RACE ABORTED   ")
+        for track in self.tracks:
+            track.status = "ABORTED"
+        logger.debug("Race.abort_race - Exit")
 #
 # ======================================================================================
 # 
@@ -1285,6 +1357,7 @@ def shutdown(sig, frame):
     logger.debug("Shutting down...")
     global shutdown
     race_monitor.terminate()
+    logger.debug("race_monitor terminated")
     client.disconnect()   # 👈 stops loop_forever
     sys.exit(0)
 
