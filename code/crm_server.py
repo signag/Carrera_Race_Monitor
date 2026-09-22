@@ -9,6 +9,7 @@ import signal
 import threading
 import sys
 import time
+import datetime
 from i18n import _, set_language
 from babel import Locale
 from babel.numbers import format_decimal
@@ -563,21 +564,6 @@ class Race_Monitor:
         self.cleanup()
         self.current_setup_step = None
 
-        # Show race information on the LCD
-        lcd = self.device_manager.lcd_circuit
-        lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
-        lcd.write_to_position(1, 0, _("RACE:  "))
-        if self.race_mode == "OPEN":
-            lcd.write_to_position(1, 7, _("OPEN     "))
-        elif self.race_mode == "LAPS":
-            lcd.write_to_position(1, 7, f"{self.race_laps:3d}")
-            lcd.write_to_position(1, 11, _("LAPS "))
-        elif self.race_mode == "TIME":
-            lcd.write_to_position(1, 7, f"{self.race_time:3d}")
-            lcd.write_to_position(1, 11, _("min "))
-        else:
-            lcd.write_to_position(1, 7, _("???"))
-
         # Set up tracks
         self._instantiated_tracks = []
         for track_name, tr_cfg in self.tracks.items():
@@ -599,12 +585,45 @@ class Race_Monitor:
                 else:
                     track.status = "ACTIVE"
 
+        # Show race information on the LCD
+        lcd = self.device_manager.lcd_circuit
+        if self.race_mode == "OPEN":
+            lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
+        else:
+            if self.start_control == True:
+                if self.lineup_ok() == False:
+                    lcd.write_to_position(0, 0, "LINEUP CARS     ")
+                else:
+                    lcd.write_to_position(0, 0, "PRESS START     ")
+            else:
+                lcd.write_to_position(0, 0, "START DRIVING   ")
+        lcd.write_to_position(1, 0, _("RACE:  "))
+        if self.race_mode == "OPEN":
+            lcd.write_to_position(1, 7, _("OPEN     "))
+        elif self.race_mode == "LAPS":
+            lcd.write_to_position(1, 7, f"{self.race_laps:3d}")
+            lcd.write_to_position(1, 11, _("LAPS "))
+        elif self.race_mode == "TIME":
+            lcd.write_to_position(1, 7, f"{self.race_time:3d}")
+            lcd.write_to_position(1, 11, _("min "))
+        else:
+            lcd.write_to_position(1, 7, _("???"))
+
         # Activate required input devices
         self.device_manager.register_BTN_Reset_pressed_callback(self.reset_button_pressed)
         self.device_manager.register_BTN_Restart_pressed_callback(self.restart_button_pressed)
         if self.start_control == True:
             self.device_manager.register_BTN_Start_pressed_callback(self.start_button_pressed)
 
+    def lineup_ok(self):
+        """Check if all tracks are ready for the race."""
+        logger.debug("Race_Monitor.lineup_ok Entry")
+        for track in self._instantiated_tracks:
+            if track.enabled and track.is_lined_up() == False:
+                logger.debug("Race_Monitor.lineup_ok - Track %s is not lined up", track.name)
+                return False
+        logger.debug("Race_Monitor.lineup_ok - All tracks are lined up")
+        return True
 
     def cleanup(self):
         """Cleanup the race monitor and all tracks.
@@ -826,27 +845,36 @@ class Track:
                 self._status = "LINEUP"
                 self.sns.register_Car_cleared_callback(self.LINEUP_handle_car_cleared)
                 self.sns.register_Car_detected_callback(self.LINEUP_handle_car_detected)
-                self.trl.turn_off()
+                self.lcd.clear()
+                self.lcd.write_to_position(0,0,_("LINEUP CAR      "))
+                self.lcd.write_to_position(1,0,("\x00" * 16))
             case "READY":
                 self._status = "READY"
                 self.sns.register_Car_cleared_callback(self.READY_handle_car_cleared)
                 self.sns.register_Car_detected_callback(self.READY_handle_car_detected)
-                self.trl.turn_off()
+                self.lcd.clear()
+                self.lcd.write_to_position(0,0,_("READY TO START  "))
             case "START_RED":
                 self._status = "START_RED"
                 self.sns.register_Car_cleared_callback(self.START_RED_handle_car_cleared)
                 self.sns.register_Car_detected_callback(self.START_RED_handle_car_detected)
                 self.trl.set_red()
+                self.lcd.clear()
+                self.lcd.write_to_position(0,0,_("WAIT FOR GREEN  "))
             case "START_YELLOW":
                 self._status = "START_YELLOW"
                 self.sns.register_Car_cleared_callback(self.START_YELLOW_handle_car_cleared)
                 self.sns.register_Car_detected_callback(self.START_YELLOW_handle_car_detected)
                 self.trl.set_yellow()
+                self.lcd.clear()
+                self.lcd.write_to_position(0,0,_("WAIT FOR GREEN  "))
             case "START_GREEN":
                 self._status = "START_GREEN"
                 self.sns.register_Car_cleared_callback(self.START_GREEN_handle_car_cleared)
                 self.sns.register_Car_detected_callback(self.START_GREEN_handle_car_detected)
                 self.trl.set_green()
+                self.lcd.clear()
+                self.lcd.write_to_position(0,0,_("GO!            "))
             case "ACTIVE":
                 self._status = "ACTIVE"
                 self.sns.register_Car_cleared_callback(self.ACTIVE_handle_car_cleared)
@@ -860,11 +888,23 @@ class Track:
                 self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
                 self.sns.register_Car_detected_callback(self.ignore_car_detected)
                 self.trl.alarm()
+                self.lcd.clear()
+                self.lcd.write_to_position(0,0,_("FALSE START     "))
             case "RACE_END":
                 self._status = "RACE_END"
                 self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
                 self.sns.register_Car_detected_callback(self.ignore_car_detected)
                 self.trl.turn_off()
+
+    def is_lined_up(self):
+        logger.debug("Track.is_lined_up Entry - Track %s", self.name)
+        if self.sns.is_occupied() == True:
+            logger.debug("Track.is_lined_up - Track %s is occupied", self.name)
+            self.status = "LINEUP"
+            return True
+        else:
+            logger.debug("Track.is_lined_up - Track %s is not occupied", self.name)
+        return False
 
     def ignore_car_detected(self):
         logger.debug("Track.ignore_car_detected Entry")
@@ -958,6 +998,100 @@ class Track:
         else:
             self.lcd.clear()
             self.lcd.off()
+
+class Race:
+    """This class implements a race
+    """
+    def __init__(self):
+        self._state = "IDLE"
+        self._tracks = []
+        self._race_mode = "OPEN"
+        self._race_laps = 0
+        self._race_time_min = 0
+        self._start_time = None
+        self._end_time = None
+        self._duration = 0.0
+        self._winner = None
+
+    @property
+    def state(self) -> str:
+        return self._state
+
+    @state.setter
+    def state(self, value: str):
+        self._state = value
+
+    @property
+    def tracks(self) -> list["Track"]:
+        return self._tracks
+
+    @tracks.setter
+    def tracks(self, value: list["Track"]):
+        self._tracks = value
+
+    @property
+    def race_mode(self) -> str:
+        return self._race_mode
+
+    @race_mode.setter
+    def race_mode(self, value: str):
+        self._race_mode = value
+
+    @property
+    def race_laps(self) -> int:
+        return self._race_laps
+
+    @race_laps.setter
+    def race_laps(self, value: int):
+        self._race_laps = value
+
+    @property
+    def race_time_min(self) -> int:
+        return self._race_time_min
+
+    @race_time_min.setter
+    def race_time_min(self, value: int):
+        self._race_time_min = value
+
+    @property
+    def start_time(self) -> datetime.datetime:
+        return self._start_time
+
+    @start_time.setter
+    def start_time(self, value: datetime.datetime):
+        self._start_time = value
+
+    @property
+    def end_time(self) -> datetime.datetime:
+        return self._end_time
+
+    @end_time.setter
+    def end_time(self, value: datetime.datetime):
+        self._end_time = value
+
+    @property
+    def duration(self) -> datetime.timedelta:
+        return self._duration
+
+    @duration.setter
+    def duration(self, value: datetime.timedelta):
+        self._duration = value
+
+    @property
+    def winner(self) -> "Track":
+        return self._winner
+
+    @winner.setter
+    def winner(self, value: "Track"):
+        self._winner = value
+
+    def start(self):
+        """Start a race
+        """
+        self.state = "running"
+        self.start_time = datetime.datetime.now()
+        self.end_time = None
+        self.duration = datetime.timedelta(0)
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Handle MQTT connect

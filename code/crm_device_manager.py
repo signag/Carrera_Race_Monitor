@@ -107,6 +107,17 @@ class LCD_crm():
         self.i2c_address = params.get("I2C_address")
         self.lcd = CharLCD('PCF8574',int(self.i2c_address, 16), cols=16, rows=2, dotsize=8)
         self.lcd.backlight_enabled = False
+        self.arrow = (
+            0b00100,
+            0b00100,
+            0b00100,
+            0b00100,
+            0b00100,
+            0b10101,
+            0b01110,
+            0b00100
+        );
+        self.lcd.create_char(0, self.arrow)
 
     def display_message(self, message: str):
         self.lcd.clear()
