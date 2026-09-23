@@ -53,9 +53,9 @@ class Traffic_Light_crm():
         self.green.off()
 
     def alarm(self):
-        self.red.blink(on_time=0.5, off_time=0.5)
-        self.yellow.blink(on_time=0.5, off_time=0.5)
-        self.green.blink(on_time=0.5, off_time=0.5)
+        self.red.blink(on_time=0.5, off_time=0.5, n=3)
+        self.yellow.blink(on_time=0.5, off_time=0.5, n=3)
+        self.green.blink(on_time=0.5, off_time=0.5, n=3)
 
 class Speaker_crm():
     def __init__(self, params: dict):

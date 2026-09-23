@@ -599,11 +599,18 @@ class Race_Monitor:
 
         # Show race information on the common LCD
         lcd = self.device_manager.lcd_circuit
-        if self.race_mode == "OPEN":
+        if self.race_mode == "OPEN" and self.start_control == False:
             lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
         else:
             spk = self.device_manager.speaker
-            self.race = Race(self.race_mode,self.race_laps, self.race_time_min, lcd, play_sound=self.play_sound, speaker=spk)
+            self.race = Race(self.race_mode,
+                             self.race_laps, 
+                             self.race_time_min, 
+                             lcd, 
+                             play_sound=self.play_sound, 
+                             speaker=spk,
+                             dev_mgr=self.device_manager,
+                             )
             for track in self._instantiated_tracks:
                 if track.enabled:
                     track.race = self.race
@@ -611,8 +618,10 @@ class Race_Monitor:
             if self.start_control == True:
                 if self.lineup_ok() == False:
                     lcd.write_to_position(0, 0, "LINEUP CARS     ")
+                    self.race.state = "LINEUP"
                 else:
                     lcd.write_to_position(0, 0, "PRESS START     ")
+                    self.race.state = "READY"
             else:
                 lcd.write_to_position(0, 0, "START DRIVING   ")
         lcd.write_to_position(1, 0, _("RACE:  "))
@@ -630,18 +639,22 @@ class Race_Monitor:
         # Activate required input devices
         self.device_manager.register_BTN_Reset_pressed_callback(self.reset_button_pressed)
         self.device_manager.register_BTN_Restart_pressed_callback(self.restart_button_pressed)
-        if self.start_control == True:
-            self.device_manager.register_BTN_Start_pressed_callback(self.start_button_pressed)
+        if self.start_control == True and self.race.state == "READY":
+            self.device_manager.register_BTN_Start_pressed_callback(self.race.start_button_pressed)
 
     def lineup_ok(self):
         """Check if all tracks are ready for the race."""
         logger.debug("Race_Monitor.lineup_ok Entry")
+        all_ready = True
         for track in self._instantiated_tracks:
             if track.enabled and track.is_lined_up() == False:
                 logger.debug("Race_Monitor.lineup_ok - Track %s is not lined up", track.name)
-                return False
-        logger.debug("Race_Monitor.lineup_ok - All tracks are lined up")
-        return True
+                all_ready = False
+            else:
+                track.status = "READY"
+        if all_ready:
+            logger.debug("Race_Monitor.lineup_ok - All tracks are lined up")
+        return all_ready
 
     def cleanup(self):
         """Cleanup the race monitor and all tracks.
@@ -881,6 +894,7 @@ class Track:
                 self.sns.register_Car_cleared_callback(self.LINEUP_handle_car_cleared)
                 self.sns.register_Car_detected_callback(self.LINEUP_handle_car_detected)
                 self.lcd.clear()
+                self.trl.turn_off()
                 self.lcd.write_to_position(0,0,_("LINEUP CAR      "))
                 self.lcd.write_to_position(1,0,("\x00" * 16))
             case "READY":
@@ -918,6 +932,8 @@ class Track:
                 self.lcd.clear()
                 self.lcd.write_to_position(0,0,_("LAP :"))
                 self.lcd.write_to_position(1,0,_("BEST:"))
+                if self._start_control == True:
+                    self.ACTIVE_handle_car_detected()
             case "FALSE_START":
                 self._status = "FALSE_START"
                 self.sns.register_Car_cleared_callback(self.ignore_car_cleared)
@@ -948,10 +964,12 @@ class Track:
     def LINEUP_handle_car_detected(self):
         logger.debug("Track.LINEUP_handle_car_detected Entry")
         self.status = "READY"
+        self.race.track_ready()
 
     def LINEUP_handle_car_cleared(self):
         logger.debug("Track.LINEUP_handle_car_cleared Entry")
         self.status = "LINEUP"
+        self.race.track_lineup()
 
     def READY_handle_car_detected(self):
         logger.debug("Track.READY_handle_car_detected Entry")
@@ -960,6 +978,7 @@ class Track:
     def READY_handle_car_cleared(self):
         logger.debug("Track.READY_handle_car_cleared Entry")
         self.status = "LINEUP"
+        self.race.track_lineup()
 
     def START_RED_handle_car_detected(self):
         logger.debug("Track.START_RED_handle_car_detected Entry")
@@ -968,6 +987,7 @@ class Track:
     def START_RED_handle_car_cleared(self):
         logger.debug("Track.START_RED_handle_car_cleared Entry")
         self.status = "FALSE_START"
+        self.race.track_lineup()
 
     def START_YELLOW_handle_car_detected(self):
         logger.debug("Track.START_YELLOW_handle_car_detected Entry")
@@ -976,6 +996,7 @@ class Track:
     def START_YELLOW_handle_car_cleared(self):
         logger.debug("Track.START_YELLOW_handle_car_cleared Entry")
         self.status = "FALSE_START"
+        self.race.track_lineup()
 
     def START_GREEN_handle_car_detected(self):
         logger.debug("Track.START_GREEN_handle_car_detected Entry")
@@ -1048,7 +1069,9 @@ class Race:
                  race_time_min: int, 
                  lcd: LCD_crm, 
                  play_sound: bool,
-                 speaker: Speaker_crm):
+                 speaker: Speaker_crm,
+                 dev_mgr: DeviceManager
+                 ):
         self._state = "IDLE"
         self._tracks = []
         self._race_mode = race_mode
@@ -1065,6 +1088,7 @@ class Race:
         self._play_sound = play_sound
         self._speaker = speaker
         self.lock = allocate_lock()
+        self._dev_mgr = dev_mgr
         self._thread = None
 
         logger.debug("Race.__init__ - Race mode: %s", self._race_mode)
@@ -1085,6 +1109,7 @@ class Race:
     @play_sound.setter
     def play_sound(self, value: bool):
         self._play_sound = value
+
     @property
     def speaker(self) -> Speaker_crm:
         return self._speaker
@@ -1099,8 +1124,27 @@ class Race:
 
     @state.setter
     def state(self, value: str):
+        logger.debug("Race.state setter - Changing state to: %s", value)
         with self.lock:
             self._state = value
+        if self._state == "LINEUP":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
+            self.lcd.write_to_position(0, 0, "LINEUP CARS     ")
+        elif self._state == "READY":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.start_button_pressed)
+            self.lcd.write_to_position(0, 0, "PRESS START     ")
+        elif self._state == "FALSE_START":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
+            self.lcd.write_to_position(0, 0, "FALSE START     ")
+        elif self._state == "STARTING":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
+            self.lcd.write_to_position(0, 0, "STARTING       ")
+        elif self._state == "ACTIVE":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
+        elif self._state == "ENDED":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
+        elif self._state == "ABORTED":
+            self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
 
     @property
     def tracks(self) -> list["Track"]:
@@ -1242,9 +1286,9 @@ class Race:
 
         while self.duration_sec < self.race_time_min * 60:
             self.duration_sec = (datetime.datetime.now() - self.start_time).total_seconds()
-            logger.debug("Race.race_timer - Elapsed time: %s seconds", self.duration_sec)
+            #logger.debug("Race.race_timer - Elapsed time: %s seconds", self.duration_sec)
             time_to_go = max(0, self.race_time_min * 60 - self.duration_sec)
-            logger.debug("Race.race_timer - Time to go: %s seconds", time_to_go)
+            #logger.debug("Race.race_timer - Time to go: %s seconds", time_to_go)
             if time_to_go >= 60.0:
                 time_to_go = int(round(time_to_go / 60))  # Convert to whole minutes
                 self.lcd.write_to_position(0,7,f"{time_to_go:3d}")
@@ -1264,6 +1308,91 @@ class Race:
             self.finish_race()
         #self._thread = None
 
+    def ignore_button_pressed(self):
+        logger.debug("Race.ignore_button_pressed Entry")
+        pass
+
+    def start_button_pressed(self):
+        logger.debug("Race.start_button_pressed Entry")
+        if self.state == "STARTING":
+            return
+        self.state = "STARTING"
+        self._thread = threading.Thread(target=self.run_start_sequence)
+        self._thread.start()
+
+    def track_ready(self):
+        """A track signals readiness"""
+        logger.debug("Race.track_ready - Entry")
+        all_ready = True
+        for track in self.tracks:
+            if track.status != "READY":
+                all_ready = False
+
+        logger.debug("Race.track_ready - All tracks ready: %s", all_ready)
+        if all_ready == True:
+            self.state = "READY"
+
+    def track_lineup(self):
+        """Handle the case when a track signals lineup, i.e. the car has been removed from start position"""
+        logger.debug("Race.track_lineup - Entry")
+        if self.state == "READY":
+            self.state = "LINEUP"
+        elif self.state == "LINEUP":
+            pass
+        elif self.state == "STARTING":
+            self.speaker.play_alarm()
+            self.state = "FALSE_START"
+            time.sleep(3)  # Pause for 2 seconds to allow the false start message to be seen
+            self.state = "LINEUP"  # Reset state to LINEUP after false start message
+            for track in self.tracks:
+                track.status = "LINEUP"
+        else:
+            pass
+
+    def run_start_sequence(self):
+        """Run the start sequence for controlled start
+
+        In sequence switch traffic lights to red, yellow, green
+        Allow the start sequence to be interrupted when the status is changed away from "STARTING"
+
+        If one of the tracks has a handicap, its real start yellow -> green will be delayed accordingly.
+        """
+        logger.debug("Race.run_start_sequence - Entry")
+
+        # Set red light for all tracks
+        for track in self.tracks:
+            track.status = "START_RED"
+
+        start_time = datetime.datetime.now()
+        start_sequence_finished = False
+        while not start_sequence_finished \
+          and (self.state == "STARTING" or self.state == "ACTIVE"):
+            current_time = datetime.datetime.now()
+            elapsed_time = (current_time - start_time).total_seconds()
+            logger.debug("Race.run_start_sequence - Elapsed time: %s", elapsed_time)
+
+            for track in self.tracks:
+                handicap = track.handicap
+                if track.status == "START_RED" and elapsed_time >= 2 + handicap and elapsed_time < 4 + handicap:
+                    track.status = "START_YELLOW"
+                    logger.debug("Race.run_start_sequence - Track %s (handicap: %s) switched to START_YELLOW at elapsed time: %s", track.id, handicap, elapsed_time)
+                if track.status == "START_YELLOW" and elapsed_time >= 4 + handicap:
+                    track.status = "START_GREEN"
+                    logger.debug("Race.run_start_sequence - Track %s (handicap: %s) switched to START_GREEN at elapsed time: %s", track.id, handicap, elapsed_time)
+
+            # Check if all tracks have green light to finish the start sequence
+            start_sequence_finished = all(track.status == "START_GREEN" or track.status == "ACTIVE" for track in self.tracks)
+            start_sequence_finished = True
+            for track in self.tracks:
+                if track.status != "START_GREEN" and track.status != "ACTIVE":
+                    start_sequence_finished = False
+                    break
+
+            time.sleep(0.1)  # Small delay to prevent busy-waiting
+
+            if start_sequence_finished:
+                self.start()
+        
     def finish_race(self):
         """Finish a race
         """
