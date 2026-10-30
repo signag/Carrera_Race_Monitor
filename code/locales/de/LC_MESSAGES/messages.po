@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Carrera_Race_Monitor 0.0.1\n"
 "Report-Msgid-Bugs-To: "
 "https://github.com/signag/Carrera_Race_Monitor/issues\n"
-"POT-Creation-Date: 2026-09-20 17:32+0200\n"
+"POT-Creation-Date: 2026-10-30 13:56+0100\n"
 "PO-Revision-Date: 2026-09-20 13:19+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -20,117 +20,154 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: code/crm_server.py:55
+#: code/crm_server.py:91
 msgid "OPEN    "
 msgstr "OFFEN   "
 
-#: code/crm_server.py:56
+#: code/crm_server.py:92
 msgid "LAPS    "
 msgstr "RUNDEN  "
 
-#: code/crm_server.py:57
+#: code/crm_server.py:93
 msgid "TIME    "
 msgstr "ZEIT    "
 
-#: code/crm_server.py:321 code/crm_server.py:328 code/crm_server.py:390
-#: code/crm_server.py:397 code/crm_server.py:461
+#: code/crm_server.py:384 code/crm_server.py:391 code/crm_server.py:467
+#: code/crm_server.py:474 code/crm_server.py:553
 msgid "min"
 msgstr "Min"
 
-#: code/crm_server.py:334 code/crm_server.py:403 code/crm_server.py:479
+#: code/crm_server.py:397 code/crm_server.py:480 code/crm_server.py:571
 msgid "DISABLED        "
 msgstr "DEAKTIVIERT     "
 
-#: code/crm_server.py:337 code/crm_server.py:406 code/crm_server.py:477
+#: code/crm_server.py:400 code/crm_server.py:483 code/crm_server.py:569
 msgid "ENABLED         "
 msgstr "AKTIVIERT       "
 
-#: code/crm_server.py:453 code/crm_server.py:506 code/crm_server.py:511
+#: code/crm_server.py:408 code/crm_server.py:421 code/crm_server.py:491
+#: code/crm_server.py:504
+msgid "NO             "
+msgstr "NEIN            "
+
+#: code/crm_server.py:411 code/crm_server.py:424 code/crm_server.py:494
+#: code/crm_server.py:507 code/crm_server.py:586 code/crm_server.py:600
+msgid "YES             "
+msgstr "JA              "
+
+#: code/crm_server.py:545 code/crm_server.py:608 code/crm_server.py:613
 msgid "SELECT TRACKS   "
 msgstr "WAEHLE SPUREN   "
 
-#: code/crm_server.py:457
+#: code/crm_server.py:549
 msgid "SELECT MODE     "
 msgstr "WAEHLE MODUS    "
 
-#: code/crm_server.py:468
+#: code/crm_server.py:560
 msgid "SELECT RACE TIME"
 msgstr "WAEHLE ZEIT     "
 
-#: code/crm_server.py:470
+#: code/crm_server.py:562
 msgid "SELECT # LAPS   "
 msgstr "WAEHLE # RUNDEN "
 
-#: code/crm_server.py:475
+#: code/crm_server.py:567
 msgid "START-CONTROL   "
 msgstr "STARTKONTROLLE  "
 
-#: code/crm_server.py:485
+#: code/crm_server.py:577
 msgid "SELECT HANDICAP "
-msgstr "WAEHLE RÜCKSTND "
+msgstr "WAEHLE RUECKSTND"
 
-#: code/crm_server.py:486
+#: code/crm_server.py:578
 msgid "See Tracks      "
 msgstr "Siehe Spuren    "
 
-#: code/crm_server.py:493
-msgid "SELECT LANGUAGE "
-msgstr "WAEHLE SPRACHE  "
+#: code/crm_server.py:584
+msgid "PLAY SOUNDS     "
+msgstr "TON EIN         "
 
-#: code/crm_server.py:498
-msgid "SAVE CONFIG     "
-msgstr "SPEICHERN       "
-
-#: code/crm_server.py:500
-#, fuzzy
-msgid "YES             "
-msgstr "JA"
-
-#: code/crm_server.py:502
+#: code/crm_server.py:588 code/crm_server.py:602
 msgid "NO              "
 msgstr "NEIN            "
 
-#: code/crm_server.py:545 code/crm_server.py:951
+#: code/crm_server.py:593
+msgid "SELECT LANGUAGE "
+msgstr "WAEHLE SPRACHE  "
+
+#: code/crm_server.py:598
+msgid "SAVE CONFIG     "
+msgstr "SPEICHERN       "
+
+#: code/crm_server.py:647 code/crm_server.py:1136
 msgid "TRACK"
 msgstr "SPUR "
 
-#: code/crm_server.py:565
+#: code/crm_server.py:689
 msgid "KEEP DRIVING    "
 msgstr "FAHRE WEITER    "
 
-#: code/crm_server.py:566
+#: code/crm_server.py:713
 msgid "RACE:  "
 msgstr "RENNEN:"
 
-#: code/crm_server.py:568
+#: code/crm_server.py:715
 msgid "OPEN     "
 msgstr "OFFEN    "
 
-#: code/crm_server.py:571
+#: code/crm_server.py:718
 msgid "LAPS "
 msgstr "RUNDN"
 
-#: code/crm_server.py:574
+#: code/crm_server.py:721
 msgid "min "
 msgstr "Min"
 
-#: code/crm_server.py:576
+#: code/crm_server.py:723
 msgid "???"
 msgstr "???"
 
-#: code/crm_server.py:853
+#: code/crm_server.py:984
+msgid "LINEUP CAR      "
+msgstr "STELLE AUTO AUF "
+
+#: code/crm_server.py:991
+msgid "READY TO START  "
+msgstr "BEREIT ZUM START"
+
+#: code/crm_server.py:998 code/crm_server.py:1005
+msgid "WAIT FOR GREEN  "
+msgstr "WARTE AUF GRUEN "
+
+#: code/crm_server.py:1012
+msgid "GO!            "
+msgstr "LOS!           "
+
+#: code/crm_server.py:1019
 msgid "LAP :"
 msgstr "RNDE:"
 
-#: code/crm_server.py:854
+#: code/crm_server.py:1020
 msgid "BEST:"
 msgstr "BEST:"
 
-#: code/crm_server.py:938 code/crm_server.py:940
+#: code/crm_server.py:1029
+msgid "FALSE START     "
+msgstr "FEHLSTART       "
+
+#: code/crm_server.py:1121 code/crm_server.py:1123
 msgid "sc"
 msgstr "Sk"
 
-#: code/crm_server.py:953
+#: code/crm_server.py:1138
 msgid "HANDICAP :"
 msgstr "RUECKSTND:"
+
+#: code/crm_server.py:1381
+msgid "min  "
+msgstr "Min  "
+
+#: code/crm_server.py:1385
+msgid "sec  "
+msgstr "Sk   "
 

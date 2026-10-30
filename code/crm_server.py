@@ -51,6 +51,7 @@ class Race_Monitor:
         self._last_reset_press_time = None
         self._current_setup_step = None
         self._save_config = False
+        self._config_file = None
         self._handicap = 0.0
         self.languages = self.supported_languages
         self.race = None
@@ -227,6 +228,22 @@ class Race_Monitor:
     def current_setup_step(self, value: str):
         self._current_setup_step = value
 
+    @property
+    def save_config(self) -> bool:
+        return self._save_config
+
+    @save_config.setter
+    def save_config(self, value: bool):
+        self._save_config = value
+
+    @property
+    def config_file(self) -> str:
+        return self._config_file
+
+    @config_file.setter
+    def config_file(self, value: str):
+        self._config_file = value
+
     def get_config(self) -> dict:
         """Get the race monitor configuration.
 
@@ -253,6 +270,8 @@ class Race_Monitor:
                     raise FileNotFoundError("Configuration file crm_config.json not found.")
         logger.debug("get_config - config_file: %s", config_file)
 
+        self.config_file = config_file
+
         with open(config_file, "r") as f:
             content = json.load(f)
 
@@ -260,6 +279,34 @@ class Race_Monitor:
                 return content
             else:
                 raise KeyError("The configuration file does not contain 'devices' key.")
+
+    def save_config_to_file(self):
+        """Save the configuration to the file from which it was loaded
+        """
+        logger.debug("Race_Monitor.save_config_to_file Entry")
+        logger.debug("Race_Monitor.save_config_to_file - save_config: %s", self.save_config)
+        logger.debug("Race_Monitor.save_config_to_file - config_file: %s", self.config_file)
+        if not self.save_config == True:
+            return
+        if not self.config_file:
+            return
+
+        with open(self.config_file, "r") as f:
+            content = json.load(f)
+
+        if "config" in content:
+            config = content["config"]
+            config["lng"] = self.lng
+            config["start_control"] = self.start_control
+            config["race_mode"] = self.race_mode
+            config["race_laps"] = self.race_laps
+            config["race_time_min"] = self.race_time_min
+            config["play_sound"] = self.play_sound
+            config["tracks"] = self.tracks
+
+        with open(self.config_file, "w") as f:
+            json.dump(content, f, indent=4)
+        logger.debug("Race_Monitor.save_config_to_file Exit")
 
     def ignore_button_pressed(self):
         logger.debug("Race_Monitor.ignore_button_pressed Entry")
@@ -356,12 +403,32 @@ class Race_Monitor:
             self.handicap -= 1.0
             for track in self._instantiated_tracks:
                 track.show_setup()
+        elif self.current_setup_step == "SOUNDS":
+            if self.play_sound == True:
+                lcd.write_to_position(1, 0, _("NO             "))
+                self.play_sound = False
+            else:
+                lcd.write_to_position(1, 0, _("YES             "))
+                self.play_sound = True
         elif self.current_setup_step == "LANGUA":
             lcd.write_to_position(1, 0, " " * 16)
             self.lng_index = (self.lng_index - 1) % len(self.languages)
             self.lng = self.languages[self.lng_index]
             lcd.write_to_position(1, 0, Locale(self.lng).get_display_name(self.lng))
             set_language(self.lng)
+            # Translate modes
+            self._modes = {
+                "OPEN": _("OPEN    "),
+                "LAPS": _("LAPS    "),
+                "TIME": _("TIME    ")
+            }
+        elif self.current_setup_step == "SAVCFG":
+            if self.save_config == True:
+                lcd.write_to_position(1, 0, _("NO             "))
+                self.save_config = False
+            else:
+                lcd.write_to_position(1, 0, _("YES             "))
+                self.save_config = True
 
     def selector_turned_right(self):
         logger.debug("Race_Monitor.selector_turned_right Entry")
@@ -425,12 +492,32 @@ class Race_Monitor:
             self.handicap += 1.0
             for track in self._instantiated_tracks:
                 track.show_setup()
+        elif self.current_setup_step == "SOUNDS":
+            if self.play_sound == True:
+                lcd.write_to_position(1, 0, _("NO             "))
+                self.play_sound = False
+            else:
+                lcd.write_to_position(1, 0, _("YES             "))
+                self.play_sound = True
         elif self.current_setup_step == "LANGUA":
             lcd.write_to_position(1, 0, " " * 16)
             self.lng_index = (self.lng_index + 1) % len(self.languages)
             self.lng = self.languages[self.lng_index]
             lcd.write_to_position(1, 0, Locale(self.lng).get_display_name(self.lng))
             set_language(self.lng)
+            # Translate modes
+            self._modes = {
+                "OPEN": _("OPEN    "),
+                "LAPS": _("LAPS    "),
+                "TIME": _("TIME    ")
+            }
+        elif self.current_setup_step == "SAVCFG":
+            if self.save_config == True:
+                lcd.write_to_position(1, 0, _("NO             "))
+                self.save_config = False
+            else:
+                lcd.write_to_position(1, 0, _("YES             "))
+                self.save_config = True
 
     def enter_setup_mode(self):
         """Enter the setup mode
@@ -442,8 +529,9 @@ class Race_Monitor:
         3. MODDAT : Set mode-specific data (time or # of laps)
         4. STARTC : Enable/disable start control
         5. HANDIC : Set track handicaps
-        6. LANGUA : Set language
-        7. SAVCFG : Save configuration
+        6. SOUNDS : Play sound settings
+        7. LANGUA : Set language
+        8. SAVCFG : Save configuration
         """
         logger.debug("Race_Monitor.enter_setup_mode Entry")
 
@@ -503,7 +591,15 @@ class Race_Monitor:
             self.current_setup_step = "HANDIC"
         elif (self.current_setup_step == "HANDIC" \
           or (self.current_setup_step == "STARTC" and self.start_control == False) \
-          or (self.current_setup_step == "STARTC" and self.enabled_tracks_count < 2) ) \
+          or (self.current_setup_step == "STARTC" and self.enabled_tracks_count < 2) ): 
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("PLAY SOUNDS     "))
+            if self.play_sound == True:
+                lcd.write_to_position(1, 0, _("YES             "))
+            else:
+                lcd.write_to_position(1, 0, _("NO              "))
+            self.current_setup_step = "SOUNDS"
+        elif self.current_setup_step == "SOUNDS" \
          and len(self.supported_languages) > 1: 
             lcd.clear()
             lcd.write_to_position(0, 0, _("SELECT LANGUAGE "))
@@ -512,12 +608,14 @@ class Race_Monitor:
         elif self.current_setup_step == "LANGUA" :
             lcd.clear()
             lcd.write_to_position(0, 0, _("SAVE CONFIG     "))
-            if self._save_config:
+            if self.save_config == True:
                 lcd.write_to_position(1, 0, _("YES             "))
             else:
                 lcd.write_to_position(1, 0, _("NO              "))
             self.current_setup_step = "SAVCFG"
         elif self.current_setup_step == "SAVCFG":
+            if self.save_config == True:
+                self.save_config_to_file()
             lcd.clear()
             lcd.write_to_position(0, 0, _("SELECT TRACKS   "))
             self.show_selected_tracks()
