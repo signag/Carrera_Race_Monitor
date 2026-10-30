@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Carrera_Race_Monitor 0.0.1\n"
 "Report-Msgid-Bugs-To: "
 "https://github.com/signag/Carrera_Race_Monitor/issues\n"
-"POT-Creation-Date: 2026-10-30 13:56+0100\n"
+"POT-Creation-Date: 2026-10-30 15:31+0100\n"
 "PO-Revision-Date: 2026-09-20 13:19+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -20,154 +20,190 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: code/crm_server.py:91
+#: code/crm_server.py:91 code/crm_server.py:421 code/crm_server.py:510
 msgid "OPEN    "
 msgstr "OFFEN   "
 
-#: code/crm_server.py:92
+#: code/crm_server.py:92 code/crm_server.py:422 code/crm_server.py:511
 msgid "LAPS    "
 msgstr "RUNDEN  "
 
-#: code/crm_server.py:93
+#: code/crm_server.py:93 code/crm_server.py:423 code/crm_server.py:512
 msgid "TIME    "
 msgstr "ZEIT    "
 
-#: code/crm_server.py:384 code/crm_server.py:391 code/crm_server.py:467
-#: code/crm_server.py:474 code/crm_server.py:553
+#: code/crm_server.py:384 code/crm_server.py:391 code/crm_server.py:473
+#: code/crm_server.py:480 code/crm_server.py:565
 msgid "min"
 msgstr "Min"
 
-#: code/crm_server.py:397 code/crm_server.py:480 code/crm_server.py:571
+#: code/crm_server.py:397 code/crm_server.py:486 code/crm_server.py:583
 msgid "DISABLED        "
 msgstr "DEAKTIVIERT     "
 
-#: code/crm_server.py:400 code/crm_server.py:483 code/crm_server.py:569
+#: code/crm_server.py:400 code/crm_server.py:489 code/crm_server.py:581
 msgid "ENABLED         "
 msgstr "AKTIVIERT       "
 
-#: code/crm_server.py:408 code/crm_server.py:421 code/crm_server.py:491
-#: code/crm_server.py:504
+#: code/crm_server.py:408 code/crm_server.py:427 code/crm_server.py:497
+#: code/crm_server.py:516
 msgid "NO             "
 msgstr "NEIN            "
 
-#: code/crm_server.py:411 code/crm_server.py:424 code/crm_server.py:494
-#: code/crm_server.py:507 code/crm_server.py:586 code/crm_server.py:600
+#: code/crm_server.py:411 code/crm_server.py:430 code/crm_server.py:500
+#: code/crm_server.py:519 code/crm_server.py:598 code/crm_server.py:612
 msgid "YES             "
 msgstr "JA              "
 
-#: code/crm_server.py:545 code/crm_server.py:608 code/crm_server.py:613
+#: code/crm_server.py:557 code/crm_server.py:620 code/crm_server.py:625
 msgid "SELECT TRACKS   "
 msgstr "WAEHLE SPUREN   "
 
-#: code/crm_server.py:549
+#: code/crm_server.py:561
 msgid "SELECT MODE     "
 msgstr "WAEHLE MODUS    "
 
-#: code/crm_server.py:560
+#: code/crm_server.py:572
 msgid "SELECT RACE TIME"
 msgstr "WAEHLE ZEIT     "
 
-#: code/crm_server.py:562
+#: code/crm_server.py:574
 msgid "SELECT # LAPS   "
 msgstr "WAEHLE # RUNDEN "
 
-#: code/crm_server.py:567
+#: code/crm_server.py:579
 msgid "START-CONTROL   "
 msgstr "STARTKONTROLLE  "
 
-#: code/crm_server.py:577
+#: code/crm_server.py:589
 msgid "SELECT HANDICAP "
 msgstr "WAEHLE RUECKSTND"
 
-#: code/crm_server.py:578
+#: code/crm_server.py:590
 msgid "See Tracks      "
 msgstr "Siehe Spuren    "
 
-#: code/crm_server.py:584
+#: code/crm_server.py:596
 msgid "PLAY SOUNDS     "
 msgstr "TON EIN         "
 
-#: code/crm_server.py:588 code/crm_server.py:602
+#: code/crm_server.py:600 code/crm_server.py:614
 msgid "NO              "
 msgstr "NEIN            "
 
-#: code/crm_server.py:593
+#: code/crm_server.py:605
 msgid "SELECT LANGUAGE "
 msgstr "WAEHLE SPRACHE  "
 
-#: code/crm_server.py:598
+#: code/crm_server.py:610
 msgid "SAVE CONFIG     "
 msgstr "SPEICHERN       "
 
-#: code/crm_server.py:647 code/crm_server.py:1136
+#: code/crm_server.py:659 code/crm_server.py:1148
 msgid "TRACK"
 msgstr "SPUR "
 
-#: code/crm_server.py:689
+#: code/crm_server.py:701
 msgid "KEEP DRIVING    "
 msgstr "FAHRE WEITER    "
 
-#: code/crm_server.py:713
+#: code/crm_server.py:718
+msgid "LINEUP CARS     "
+msgstr "STELLE AUTO AUF "
+
+#: code/crm_server.py:721
+msgid "PRESS START     "
+msgstr "DRUECKE START   "
+
+#: code/crm_server.py:724
+msgid "START DRIVING   "
+msgstr "FAHRE LOS       "
+
+#: code/crm_server.py:725
 msgid "RACE:  "
 msgstr "RENNEN:"
 
-#: code/crm_server.py:715
+#: code/crm_server.py:727
 msgid "OPEN     "
 msgstr "OFFEN    "
 
-#: code/crm_server.py:718
+#: code/crm_server.py:730 code/crm_server.py:1342 code/crm_server.py:1345
 msgid "LAPS "
 msgstr "RUNDN"
 
-#: code/crm_server.py:721
+#: code/crm_server.py:733 code/crm_server.py:1349 code/crm_server.py:1352
 msgid "min "
 msgstr "Min"
 
-#: code/crm_server.py:723
+#: code/crm_server.py:735
 msgid "???"
 msgstr "???"
 
-#: code/crm_server.py:984
+#: code/crm_server.py:996
 msgid "LINEUP CAR      "
 msgstr "STELLE AUTO AUF "
 
-#: code/crm_server.py:991
+#: code/crm_server.py:1003
 msgid "READY TO START  "
 msgstr "BEREIT ZUM START"
 
-#: code/crm_server.py:998 code/crm_server.py:1005
+#: code/crm_server.py:1010 code/crm_server.py:1017
 msgid "WAIT FOR GREEN  "
 msgstr "WARTE AUF GRUEN "
 
-#: code/crm_server.py:1012
+#: code/crm_server.py:1024
 msgid "GO!            "
 msgstr "LOS!           "
 
-#: code/crm_server.py:1019
+#: code/crm_server.py:1031
 msgid "LAP :"
 msgstr "RNDE:"
 
-#: code/crm_server.py:1020
+#: code/crm_server.py:1032
 msgid "BEST:"
 msgstr "BEST:"
 
-#: code/crm_server.py:1029
+#: code/crm_server.py:1041
 msgid "FALSE START     "
 msgstr "FEHLSTART       "
 
-#: code/crm_server.py:1121 code/crm_server.py:1123
+#: code/crm_server.py:1133 code/crm_server.py:1135
 msgid "sc"
 msgstr "Sk"
 
-#: code/crm_server.py:1138
+#: code/crm_server.py:1150
 msgid "HANDICAP :"
 msgstr "RUECKSTND:"
 
-#: code/crm_server.py:1381
+#: code/crm_server.py:1340 code/crm_server.py:1347
+msgid "TO GO: "
+msgstr "REST:  "
+
+#: code/crm_server.py:1343 code/crm_server.py:1350
+msgid "TARGET:"
+msgstr "ZIEL:  "
+
+#: code/crm_server.py:1393
 msgid "min  "
 msgstr "Min  "
 
-#: code/crm_server.py:1385
+#: code/crm_server.py:1397
 msgid "sec  "
 msgstr "Sk   "
+
+#: code/crm_server.py:1507
+msgid "RACE FINISHED   "
+msgstr "RENNEN BEENDET  "
+
+#: code/crm_server.py:1508
+msgid "WINNER:         "
+msgstr "GEWINNER:       "
+
+#: code/crm_server.py:1514
+msgid "TRACK "
+msgstr "SPUR  "
+
+#: code/crm_server.py:1532
+msgid "RACE ABORTED   "
+msgstr "RENNEN ABRUCH  "
 

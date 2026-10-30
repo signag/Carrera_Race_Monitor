@@ -158,19 +158,35 @@ class Race_Monitor:
                            < 0.0 for first track
                            > 0.0 for second track
         """
+        logger.debug("Race_Monitor.handicap - Setting handicap to: %s", value)
+        logger.debug("Race_Monitor.handicap - Current # instantiated tracks: %s", len(self._instantiated_tracks))
         self._handicap = value
+
+        # Set the handicap for the track configurations
+        for track_name, track_config in self._tracks.items():
+            if value < 0.0 and track_name == "Track_1":
+                track_config["handicap"] = abs(value)
+            elif value > 0.0 and track_name == "Track_2":
+                track_config["handicap"] = abs(value)
+            else:
+                track_config["handicap"] = 0.0
+
+        # Set the handicap for the instantiated tracks based on the value
         if len(self._instantiated_tracks) > 1:
             trk1 = self._instantiated_tracks[0]
             trk2 = self._instantiated_tracks[1]
             if value < 0.0:
                 trk1.handicap = abs(value)
                 trk2.handicap = 0.0
+                logger.debug("Race_Monitor.handicap - Applied handicap: trk1=%s, trk2=%s", trk1.handicap, trk2.handicap)
             elif value > 0.0:
                 trk2.handicap = abs(value)
                 trk1.handicap = 0.0
+                logger.debug("Race_Monitor.handicap - Applied handicap: trk1=%s, trk2=%s", trk1.handicap, trk2.handicap)
             elif value == 0.0:
                 trk1.handicap = 0.0
                 trk2.handicap = 0.0
+                logger.debug("Race_Monitor.handicap - Applied handicap: trk1=%s, trk2=%s", trk1.handicap, trk2.handicap)
 
     @property
     def start_control(self) -> bool:
@@ -639,6 +655,7 @@ class Race_Monitor:
             for track_name, tr_cfg in self.tracks.items():
                 enabled = tr_cfg.get("enabled", True)
                 handicap = tr_cfg.get("handicap", 0.0)
+                logger.debug("Race_Monitor.show_selected_tracks - Track: %s, Enabled: %s, Handicap: %s", track_name, enabled, handicap)
                 track = Track(name=track_name, 
                                 enabled=enabled,
                                 handicap=handicap,
@@ -679,6 +696,7 @@ class Race_Monitor:
         for track_name, tr_cfg in self.tracks.items():
             enabled = tr_cfg.get("enabled", True)
             handicap = tr_cfg.get("handicap", 0.0)
+            logger.debug("Race_Monitor.restart - Track: %s, Enabled: %s, Handicap: %s", track_name, enabled, handicap)
             track = Track(name=track_name, 
                             enabled=enabled, 
                             handicap=handicap,
@@ -715,13 +733,13 @@ class Race_Monitor:
                     self.race.tracks.append(track)
             if self.start_control == True:
                 if self.lineup_ok() == False:
-                    lcd.write_to_position(0, 0, "LINEUP CARS     ")
+                    lcd.write_to_position(0, 0, _("LINEUP CARS     "))
                     self.race.state = "LINEUP"
                 else:
-                    lcd.write_to_position(0, 0, "PRESS START     ")
+                    lcd.write_to_position(0, 0, _("PRESS START     "))
                     self.race.state = "READY"
             else:
-                lcd.write_to_position(0, 0, "START DRIVING   ")
+                lcd.write_to_position(0, 0, _("START DRIVING   "))
         lcd.write_to_position(1, 0, _("RACE:  "))
         if self.race_mode == "OPEN":
             lcd.write_to_position(1, 7, _("OPEN     "))
@@ -1337,19 +1355,19 @@ class Race:
         logger.debug("Race.start - Race start time set to: %s", self.start_time)
         self.lcd.clear()
         if self.race_mode == "LAPS":
-            self.lcd.write_to_position(0, 0, "TO GO: ")
+            self.lcd.write_to_position(0, 0, _("TO GO: "))
             self.lcd.write_to_position(0,7,f"{self.race_laps:3d}")
-            self.lcd.write_to_position(0, 11, "LAPS ")
-            self.lcd.write_to_position(1, 0, "TARGET:")
+            self.lcd.write_to_position(0, 11, _("LAPS "))
+            self.lcd.write_to_position(1, 0, _("TARGET:"))
             self.lcd.write_to_position(1,7,f"{self.race_laps:3d}")
-            self.lcd.write_to_position(1, 11, "LAPS ")
+            self.lcd.write_to_position(1, 11, _("LAPS "))
         elif self.race_mode == "TIME":
-            self.lcd.write_to_position(0, 0, "TO GO: ")
+            self.lcd.write_to_position(0, 0, _("TO GO: "))
             self.lcd.write_to_position(0,7,f"{self.race_time_min:3d}")
-            self.lcd.write_to_position(0, 11, "min ")
-            self.lcd.write_to_position(1, 0, "TARGET:")
+            self.lcd.write_to_position(0, 11, _("min "))
+            self.lcd.write_to_position(1, 0, _("TARGET:"))
             self.lcd.write_to_position(1,7,f"{self.race_time_min:3d}")
-            self.lcd.write_to_position(1, 11, "min ")
+            self.lcd.write_to_position(1, 11, _("min "))
             self._thread = threading.Thread(target=self.race_timer)
             self._thread.start()
             logger.debug("Race.start - Race timer started")
@@ -1370,10 +1388,11 @@ class Race:
         if track.laps > self.laps:
             self.laps = track.laps
             logger.debug("Race.set_laps - Updated laps to: %s", self.laps)
-            laps_to_go = self.race_laps - self.laps
-            logger.debug("Race.set_laps - Laps to go: %s", laps_to_go)
-            self.lcd.write_to_position(0,7,f"{laps_to_go:3d}")
-            logger.debug("Race.set_laps - Updated LCD with laps to go: %s", laps_to_go)
+            if self.race_mode == "LAPS":
+                laps_to_go = self.race_laps - self.laps
+                logger.debug("Race.set_laps - Laps to go: %s", laps_to_go)
+                self.lcd.write_to_position(0,7,f"{laps_to_go:3d}")
+                logger.debug("Race.set_laps - Updated LCD with laps to go: %s", laps_to_go)
 
         if self.race_mode == "LAPS":
             if self.laps >= self.race_laps:
@@ -1504,14 +1523,14 @@ class Race:
         self._thread = None
         logger.debug("Race.finish_race - Race thread finished and cleared")
         self.lcd.clear()
-        self.lcd.write_to_position(0, 0, "RACE FINISHED   ")
-        self.lcd.write_to_position(1, 0, "WINNER:         ")
+        self.lcd.write_to_position(0, 0, _("RACE FINISHED   "))
+        self.lcd.write_to_position(1, 0, _("WINNER:         "))
         self.winner = self.tracks[0]
         for track in self.tracks:
             if track.laps > self.winner.laps:
                 self.winner = track
             track.finish()
-        self.lcd.write_to_position(1, 8, "TRACK ")
+        self.lcd.write_to_position(1, 8, _("TRACK "))
         self.lcd.write_to_position(1, 15, f"{self.winner.id}")
         if self.play_sound:
             self.speaker.play_fanfare()
@@ -1529,7 +1548,7 @@ class Race:
         self._thread = None
         logger.debug("Race.abort_race - Race thread finished and cleared")
         self.lcd.clear()
-        self.lcd.write_to_position(0, 0, "RACE ABORTED   ")
+        self.lcd.write_to_position(0, 0, _("RACE ABORTED   "))
         for track in self.tracks:
             track.status = "ABORTED"
         logger.debug("Race.abort_race - Exit")
