@@ -399,6 +399,8 @@ fi
 #############################################
 # Enable I2C interface if not already enabled
 #############################################
+echo
+echo "Checking I2C interface status ..."
 NEED_REBOOT=0
 if [ "$(sudo raspi-config nonint get_i2c)" -ne 0 ]; then
     echo
