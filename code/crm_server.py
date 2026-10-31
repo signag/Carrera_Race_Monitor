@@ -3,6 +3,7 @@
 """
 import os
 from pathlib import Path
+from RPLCD import lcd
 import paho.mqtt.client as mqtt
 import json
 import signal
@@ -380,11 +381,17 @@ class Race_Monitor:
                     t1.enabled = True
                 else:
                     t1.enabled = False
+            cnt_enabled = 0
             for track in self._instantiated_tracks:
                 name = track.name
                 enabled = track.enabled
                 self.tracks[name]["enabled"] = enabled
                 logger.debug("Race_Monitor.selector_turned_left - Track %s - Enabled: %s", name, enabled)
+                if enabled:
+                    cnt_enabled += 1
+            logger.debug("Race_Monitor.selector_turned_left - Total enabled tracks: %d", cnt_enabled)
+            if cnt_enabled < 2:
+                self.handicap = 0.0
             self.show_selected_tracks()
         elif self.current_setup_step == "RCMODE":
             if self.race_mode == "OPEN":
@@ -469,11 +476,17 @@ class Race_Monitor:
                     t1.enabled = True
                 else:
                     t1.enabled = False
+            cnt_enabled = 0
             for track in self._instantiated_tracks:
                 name = track.name
                 enabled = track.enabled
                 self.tracks[name]["enabled"] = enabled
                 logger.debug("Race_Monitor.selector_turned_right - Track %s - Enabled: %s", name, enabled)
+                if enabled:
+                    cnt_enabled += 1
+            logger.debug("Race_Monitor.selector_turned_left - Total enabled tracks: %d", cnt_enabled)
+            if cnt_enabled < 2:
+                self.handicap = 0.0
             self.show_selected_tracks()
         elif self.current_setup_step == "RCMODE":
             if self.race_mode == "OPEN":
@@ -763,11 +776,15 @@ class Race_Monitor:
         logger.debug("Race_Monitor.lineup_ok Entry")
         all_ready = True
         for track in self._instantiated_tracks:
-            if track.enabled and track.is_lined_up() == False:
-                logger.debug("Race_Monitor.lineup_ok - Track %s is not lined up", track.name)
-                all_ready = False
+            if track.enabled == True:
+                if track.is_lined_up() == False:
+                    logger.debug("Race_Monitor.lineup_ok - Track %s is not lined up", track.name)
+                    all_ready = False
+                else:
+                    logger.debug("Race_Monitor.lineup_ok - Track %s is lined up", track.name)
+                    track.status = "READY"
             else:
-                track.status = "READY"
+                logger.debug("Race_Monitor.lineup_ok - Track %s is not enabled", track.name)
         if all_ready:
             logger.debug("Race_Monitor.lineup_ok - All tracks are lined up")
         return all_ready
@@ -1245,16 +1262,16 @@ class Race:
             self._state = value
         if self._state == "LINEUP":
             self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
-            self.lcd.write_to_position(0, 0, "LINEUP CARS     ")
+            self.lcd.write_to_position(0, 0, _("LINEUP CARS     "))
         elif self._state == "READY":
             self._dev_mgr.register_BTN_Start_pressed_callback(self.start_button_pressed)
-            self.lcd.write_to_position(0, 0, "PRESS START     ")
+            self.lcd.write_to_position(0, 0, _("PRESS START     "))
         elif self._state == "FALSE_START":
             self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
-            self.lcd.write_to_position(0, 0, "FALSE START     ")
+            self.lcd.write_to_position(0, 0, _("FALSE START     "))
         elif self._state == "STARTING":
             self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
-            self.lcd.write_to_position(0, 0, "STARTING       ")
+            self.lcd.write_to_position(0, 0, _("STARTING       "))
         elif self._state == "ACTIVE":
             self._dev_mgr.register_BTN_Start_pressed_callback(self.ignore_button_pressed)
         elif self._state == "ENDED":
@@ -1354,6 +1371,10 @@ class Race:
         logger.debug("Race.start - Race state set to ACTIVE")
         logger.debug("Race.start - Race start time set to: %s", self.start_time)
         self.lcd.clear()
+        if self.race_mode == "OPEN":
+            self.lcd.write_to_position(0, 0, _("KEEP DRIVING    "))
+            self.lcd.write_to_position(1, 0, _("RACE:  "))
+            self.lcd.write_to_position(1, 7, _("OPEN     "))
         if self.race_mode == "LAPS":
             self.lcd.write_to_position(0, 0, _("TO GO: "))
             self.lcd.write_to_position(0,7,f"{self.race_laps:3d}")
@@ -1524,7 +1545,7 @@ class Race:
         logger.debug("Race.finish_race - Race thread finished and cleared")
         self.lcd.clear()
         self.lcd.write_to_position(0, 0, _("RACE FINISHED   "))
-        self.lcd.write_to_position(1, 0, _("WINNER:         "))
+        self.lcd.write_to_position(1, 0, _("WINNER: "))
         self.winner = self.tracks[0]
         for track in self.tracks:
             if track.laps > self.winner.laps:

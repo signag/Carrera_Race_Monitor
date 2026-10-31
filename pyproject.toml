@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 include = ["code*"]
 [project]
 name = "Carrera_Race_Monitor"
-version = "0.0.1"
+version = "1.0.0"
 dependencies = [
     "gpiozero>=2.0.0",
     "RPLCD>=1.4.0",
