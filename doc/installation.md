@@ -15,6 +15,7 @@
 <br>Doc: https://rplcd.readthedocs.io/en/stable/
 6. I18n
 <br>```sudo apt install gettext```
+<br>```pip install Babel```
 7. Flask
 <br>```pip install flask```
 <br>```pip install flask-socketio```
@@ -26,8 +27,8 @@
 8. Enable I2C
 <br>```sudo raspi-config```
 <br>Interface Options -> I2C -> Enable
-9. Check I2C ports for LCD2
-<br>If LCD2 are connected and properly soldered for different ports, run
+9. Check I2C ports for LCDs
+<br>If LCDs are connected and properly soldered for different ports, run
 <br>```sudo i2cdetect -y 1```
 <br>Depending on your chosen ports, you should see something like the following showing one distinct port for each of the three LCD displays
 <br>```
