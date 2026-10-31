@@ -572,3 +572,8 @@ else
     echo "After assembly and successful device tests rerun this installer to install the services."
     echo "For details refer to CRM_Assembly_Instructions.pdf" 
 fi
+
+if [[ "$NEED_REBOOT" == true ]]; then
+    echo
+    echo "A system reboot is required to complete the installation."
+fi
