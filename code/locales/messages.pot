@@ -1,0 +1,212 @@
+# Translations template for Carrera_Race_Monitor.
+# Copyright (C) 2026 signag
+# This file is distributed under the same license as the
+# Carrera_Race_Monitor project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Carrera_Race_Monitor 1.0.0\n"
+"Report-Msgid-Bugs-To: "
+"https://github.com/signag/Carrera_Race_Monitor/issues\n"
+"POT-Creation-Date: 2026-10-31 14:06+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: code/crm_server.py:92 code/crm_server.py:444 code/crm_server.py:539
+msgid "OPEN    "
+msgstr ""
+
+#: code/crm_server.py:93 code/crm_server.py:445 code/crm_server.py:540
+msgid "LAPS    "
+msgstr ""
+
+#: code/crm_server.py:94 code/crm_server.py:446 code/crm_server.py:541
+msgid "TIME    "
+msgstr ""
+
+#: code/crm_server.py:407 code/crm_server.py:414 code/crm_server.py:502
+#: code/crm_server.py:509 code/crm_server.py:594
+msgid "min"
+msgstr ""
+
+#: code/crm_server.py:420 code/crm_server.py:515 code/crm_server.py:612
+msgid "DISABLED        "
+msgstr ""
+
+#: code/crm_server.py:423 code/crm_server.py:518 code/crm_server.py:610
+msgid "ENABLED         "
+msgstr ""
+
+#: code/crm_server.py:431 code/crm_server.py:450 code/crm_server.py:526
+#: code/crm_server.py:545
+msgid "NO             "
+msgstr ""
+
+#: code/crm_server.py:434 code/crm_server.py:453 code/crm_server.py:529
+#: code/crm_server.py:548 code/crm_server.py:627 code/crm_server.py:641
+msgid "YES             "
+msgstr ""
+
+#: code/crm_server.py:586 code/crm_server.py:649 code/crm_server.py:654
+msgid "SELECT TRACKS   "
+msgstr ""
+
+#: code/crm_server.py:590
+msgid "SELECT MODE     "
+msgstr ""
+
+#: code/crm_server.py:601
+msgid "SELECT RACE TIME"
+msgstr ""
+
+#: code/crm_server.py:603
+msgid "SELECT # LAPS   "
+msgstr ""
+
+#: code/crm_server.py:608
+msgid "START-CONTROL   "
+msgstr ""
+
+#: code/crm_server.py:618
+msgid "SELECT HANDICAP "
+msgstr ""
+
+#: code/crm_server.py:619
+msgid "See Tracks      "
+msgstr ""
+
+#: code/crm_server.py:625
+msgid "PLAY SOUNDS     "
+msgstr ""
+
+#: code/crm_server.py:629 code/crm_server.py:643
+msgid "NO              "
+msgstr ""
+
+#: code/crm_server.py:634
+msgid "SELECT LANGUAGE "
+msgstr ""
+
+#: code/crm_server.py:639
+msgid "SAVE CONFIG     "
+msgstr ""
+
+#: code/crm_server.py:689 code/crm_server.py:1183
+msgid "TRACK"
+msgstr ""
+
+#: code/crm_server.py:732 code/crm_server.py:1375
+msgid "KEEP DRIVING    "
+msgstr ""
+
+#: code/crm_server.py:749 code/crm_server.py:1265
+msgid "LINEUP CARS     "
+msgstr ""
+
+#: code/crm_server.py:752 code/crm_server.py:1268
+msgid "PRESS START     "
+msgstr ""
+
+#: code/crm_server.py:755
+msgid "START DRIVING   "
+msgstr ""
+
+#: code/crm_server.py:756 code/crm_server.py:1376
+msgid "RACE:  "
+msgstr ""
+
+#: code/crm_server.py:758 code/crm_server.py:1377
+msgid "OPEN     "
+msgstr ""
+
+#: code/crm_server.py:761 code/crm_server.py:1381 code/crm_server.py:1384
+msgid "LAPS "
+msgstr ""
+
+#: code/crm_server.py:764 code/crm_server.py:1388 code/crm_server.py:1391
+msgid "min "
+msgstr ""
+
+#: code/crm_server.py:766
+msgid "???"
+msgstr ""
+
+#: code/crm_server.py:1031
+msgid "LINEUP CAR      "
+msgstr ""
+
+#: code/crm_server.py:1038
+msgid "READY TO START  "
+msgstr ""
+
+#: code/crm_server.py:1045 code/crm_server.py:1052
+msgid "WAIT FOR GREEN  "
+msgstr ""
+
+#: code/crm_server.py:1059
+msgid "GO!            "
+msgstr ""
+
+#: code/crm_server.py:1066
+msgid "LAP :"
+msgstr ""
+
+#: code/crm_server.py:1067
+msgid "BEST:"
+msgstr ""
+
+#: code/crm_server.py:1076 code/crm_server.py:1271
+msgid "FALSE START     "
+msgstr ""
+
+#: code/crm_server.py:1168 code/crm_server.py:1170
+msgid "sc"
+msgstr ""
+
+#: code/crm_server.py:1185
+msgid "HANDICAP :"
+msgstr ""
+
+#: code/crm_server.py:1274
+msgid "STARTING       "
+msgstr ""
+
+#: code/crm_server.py:1379 code/crm_server.py:1386
+msgid "TO GO: "
+msgstr ""
+
+#: code/crm_server.py:1382 code/crm_server.py:1389
+msgid "TARGET:"
+msgstr ""
+
+#: code/crm_server.py:1433
+msgid "min  "
+msgstr ""
+
+#: code/crm_server.py:1437
+msgid "sec  "
+msgstr ""
+
+#: code/crm_server.py:1547
+msgid "RACE FINISHED   "
+msgstr ""
+
+#: code/crm_server.py:1548
+msgid "WINNER: "
+msgstr ""
+
+#: code/crm_server.py:1554
+msgid "TRACK "
+msgstr ""
+
+#: code/crm_server.py:1572
+msgid "RACE ABORTED   "
+msgstr ""
+
