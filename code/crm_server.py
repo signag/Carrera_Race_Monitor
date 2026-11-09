@@ -17,6 +17,7 @@ from babel import Locale
 from babel.numbers import format_decimal
 from crm_device_manager import DeviceManager, Traffic_Light_crm, Sensor_crm, LCD_crm, Speaker_crm
 import logging
+from version import version
 
 HOMEDIR = os.getcwd()
 
@@ -35,7 +36,7 @@ streamhandler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(n
 logger = logging.getLogger("crm_server")
 logger.addHandler(streamhandler)
 logger.addHandler(filehandler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 class Race_Monitor:
     def __init__(self):
@@ -560,7 +561,8 @@ class Race_Monitor:
         5. HANDIC : Set track handicaps
         6. SOUNDS : Play sound settings
         7. LANGUA : Set language
-        8. SAVCFG : Save configuration
+        8. VERSIO : Display version information
+        9. SAVCFG : Save configuration
         """
         logger.debug("Race_Monitor.enter_setup_mode Entry")
 
@@ -635,6 +637,11 @@ class Race_Monitor:
             lcd.write_to_position(1, 0, Locale(self.lng).get_display_name(self.lng))
             self.current_setup_step = "LANGUA"
         elif self.current_setup_step == "LANGUA" :
+            lcd.clear()
+            lcd.write_to_position(0, 0, _("VERSION         "))
+            lcd.write_to_position(1, 0, version)
+            self.current_setup_step = "VERSIO"
+        elif self.current_setup_step == "VERSIO" :
             lcd.clear()
             lcd.write_to_position(0, 0, _("SAVE CONFIG     "))
             if self.save_config == True:
