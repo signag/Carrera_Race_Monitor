@@ -1,6 +1,6 @@
 # Carrera_Race_Monitor V1.1.0
 
-![crm_img](./doc/img/crm_img.jpg)
+![crm_img](./docs/img/crm_img.jpg)
 
 Carrera Race Monitor (CRM) is a device for controlling and monitoring slot car races.
 
@@ -21,6 +21,6 @@ While the current version is restricted to functions included in the CRM bridge 
 
 Carrera Race Monitor is built from a 3D printed housing with off-the-shelf electronics components controlled by a Raspberry Pi Zero.
 
-For more details, see [Carrera Race Monitor D0cumentation](https://signag.github.io/Carrera_Race_Monitor/latest/)
+For more details, see [Carrera Race Monitor Documentation](https://signag.github.io/Carrera_Race_Monitor/latest/)
 
 For latest updates, see the [Release Notes](https://signag.github.io/Carrera_Race_Monitor/latest/Release_Notes).
