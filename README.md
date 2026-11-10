@@ -21,16 +21,6 @@ While the current version is restricted to functions included in the CRM bridge 
 
 Carrera Race Monitor is built from a 3D printed housing with off-the-shelf electronics components controlled by a Raspberry Pi Zero.
 
-Print files are available at [https://makerworld.com/en/models/3564315-carrera-race-monitor](https://makerworld.com/en/models/3564315-carrera-race-monitor)
+For more details, see [Carrera Race Monitor D0cumentation](https://signag.github.io/Carrera_Race_Monitor/latest/)
 
-See the [CRM_Assembly_Instructions_en.pdf](./doc/CRM_Assembly_Instructions_en.pdf) for required parts and assembly instructions.
-
-See the [CRM_User_Guide_en.pdf](./doc/CRM_User_Guide_en.pdf) for usage instructions.
-
-This repository hosts the CRM software as well as the latest documentation.
-<br>The software is written in Python and Flask.
-
-Installation as well as updates to the latest version are done using an automatic installer (see [CRM_User_Guide_en.pdf](./doc/CRM_User_Guide_en.pdf) ch. 9)
-
-Bugfixes and new features are tracked in the [Release Notes](./doc/Release_Notes.md).
-
+For latest updates, see the [Release Notes](https://signag.github.io/Carrera_Race_Monitor/latest/Release_Notes).
