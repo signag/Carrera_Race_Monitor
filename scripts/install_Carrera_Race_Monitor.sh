@@ -293,10 +293,14 @@ if [[ "$UPDATE_INSTALL" == true ]]; then
     echo
     if [[ ! -d "Carrera_Race_Monitor" ]]; then
         echo "Cloning Carrera_Race_Monitor ..."
-        git clone --branch main --single-branch --depth 1 "$REPO_URL"
+        git clone --branch main --single-branch --depth 1 --filter=blob:none --sparse "$REPO_URL"
+        cd Carrera_Race_Monitor
+        git sparse-checkout set code config scripts
+        cd ..
     else
         echo "Repository already exists — updating ..."
         cd Carrera_Race_Monitor
+        git sparse-checkout set code config scripts
         git fetch origin main --depth=1
         git reset --hard origin/main
         cd ..
